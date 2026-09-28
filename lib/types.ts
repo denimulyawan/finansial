@@ -102,6 +102,7 @@ export interface KategoriJumlah {
   nama: string;
   warna: string;
   jumlah: number;
+  tipe?: "Pemasukan" | "Pengeluaran";
 }
 
 export interface Bootstrap {

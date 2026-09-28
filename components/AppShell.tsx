@@ -24,7 +24,6 @@ import { Avatar, Merek, useAuth } from "@/components/auth";
 import TxForm from "@/components/TxForm";
 import { Modal } from "@/components/ui";
 import { ambilTema, simpanTema } from "@/lib/api";
-import { picuBootstrap } from "@/lib/hooks";
 import { EVENT_BOOTSTRAP } from "@/lib/hooks";
 
 const MENU = [

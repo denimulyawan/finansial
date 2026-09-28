@@ -124,10 +124,15 @@ export default function HalamanLaporan() {
     }
   }
 
-  const totalKeluarKategori =
-    data?.perKategori
-      .filter((k) => k.id !== "gaji")
-      .reduce((a, k) => a + Math.abs(k.jumlah), 0) || 0;
+  const kategoriKeluar = (data?.perKategori || []).filter(
+    (k) => k.tipe !== "Pemasukan"
+  );
+  const kategoriMasuk = (data?.perKategori || []).filter(
+    (k) => k.tipe === "Pemasukan"
+  );
+  const totalKeluarKategori = kategoriKeluar.reduce((a, k) => a + k.jumlah, 0);
+  const maksKeluar =
+    Math.max(0, ...kategoriKeluar.map((k) => k.jumlah)) || 1;
 
   return (
     <>
@@ -279,17 +284,20 @@ export default function HalamanLaporan() {
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-          ) : data.perKategori.length === 0 ? (
+          ) : kategoriKeluar.length === 0 && kategoriMasuk.length === 0 ? (
             <Kosong
               ikon={<BarChart3 size={24} />}
               judul="Belum ada data"
               isi="Belum ada transaksi pada periode ini."
             />
           ) : (
-            <div className="px-5 pb-5 space-y-3.5">
-              {data.perKategori.map((k) => {
-                const maks = Math.max(...data.perKategori.map((x) => Math.abs(x.jumlah))) || 1;
-                return (
+            <div className="px-5 pb-5">
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide muted mb-3">
+                Pengeluaran · {rp(totalKeluarKategori)}
+              </p>
+
+              <div className="space-y-3.5">
+                {kategoriKeluar.map((k) => (
                   <div key={k.id}>
                     <div className="flex items-center gap-2.5 mb-1.5">
                       <span
@@ -299,7 +307,7 @@ export default function HalamanLaporan() {
                       <span className="text-[13px] flex-1 truncate">{k.nama}</span>
                       <span className="num text-[12.5px] muted">
                         {totalKeluarKategori
-                          ? persen((Math.abs(k.jumlah) / totalKeluarKategori) * 100, 0)
+                          ? persen((k.jumlah / totalKeluarKategori) * 100, 0)
                           : "0%"}
                       </span>
                       <span className="num text-[13px] font-semibold w-[92px] text-right">
@@ -309,14 +317,44 @@ export default function HalamanLaporan() {
                     <div className="bar" style={{ height: 5 }}>
                       <i
                         style={{
-                          width: `${(Math.abs(k.jumlah) / maks) * 100}%`,
+                          width: `${(k.jumlah / maksKeluar) * 100}%`,
                           background: k.warna,
                         }}
                       />
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
+
+              {kategoriMasuk.length > 0 && (
+                <>
+                  <div className="divider my-5" />
+                  <p className="text-[11.5px] font-semibold uppercase tracking-wide muted mb-3">
+                    Pemasukan
+                  </p>
+                  <div className="space-y-2">
+                    {kategoriMasuk.map((k) => (
+                      <div
+                        key={k.id}
+                        className="flex items-center gap-3 p-2.5 rounded-xl"
+                        style={{ background: "var(--surface-2)" }}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ background: k.warna }}
+                        />
+                        <span className="text-[13px] flex-1 truncate">{k.nama}</span>
+                        <span
+                          className="num text-[13px] font-semibold"
+                          style={{ color: "var(--success)" }}
+                        >
+                          {rp(k.jumlah)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </Card>

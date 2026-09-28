@@ -243,15 +243,6 @@ export function Skeleton({
   return <div className={`skeleton ${className}`} style={style} />;
 }
 
-export function MemuatKartu({ tinggi = 96 }: { tinggi?: number }) {
-  return (
-    <div className="card card-pad">
-      <Skeleton className="h-3 w-24 mb-3" />
-      <Skeleton className="h-6 w-32" style={{ height: tinggi * 0.25 }} />
-    </div>
-  );
-}
-
 export function Galat({
   pesan,
   onCobaLagi,
