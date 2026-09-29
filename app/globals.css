@@ -140,7 +140,10 @@ body {
   background-position: right 11px center;
   padding-right: 34px;
 }
-.input-rupiah { font-variant-numeric: tabular-nums; font-weight: 620; font-size: 17px; height: 46px; }
+/* Jarak kiri ditulis di sini, bukan lewat class utility Tailwind: gaya kustom
+   di berkas ini berada di luar @layer sehingga selalu menang atas utility. */
+.input-rupiah { padding-left: 42px; font-variant-numeric: tabular-nums; font-weight: 620; font-size: 17px; height: 46px; }
+.input-cari { padding-left: 34px; }
 
 /* ============================== BADGE ================================ */
 .badge {

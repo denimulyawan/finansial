@@ -147,7 +147,7 @@ export default function HalamanTransaksi() {
               className="absolute left-3 top-1/2 -translate-y-1/2 muted pointer-events-none"
             />
             <input
-              className="input pl-9"
+              className="input input-cari"
               placeholder="Search…"
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}

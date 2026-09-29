@@ -148,7 +148,7 @@ export function RupiahInput({
         Rp
       </span>
       <input
-        className="input input-rupiah pl-11"
+        className="input input-rupiah"
         inputMode="numeric"
         autoComplete="off"
         name={nama}
