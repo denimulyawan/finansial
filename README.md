@@ -78,11 +78,25 @@ finansial/
 1. Buat Google Sheet baru di <https://sheets.new>. Beri nama, misalnya
    `Finansial DB`.
 2. Menu **Ekstensi → Apps Script**.
-3. Hapus semua kode di editor, lalu tempel **seluruh isi** `gas/Code.gs`.
-4. Simpan dengan `Ctrl+S`.
-5. Di dropdown fungsi, pilih **`setup`**, klik **Run**, dan izinkan akses saat
-   diminta. Ini akan membuat semua sheet, mengisi kategori awal, dan
-   mendaftarkan emailmu sebagai admin.
+3. Klik ikon gerigi **Project Settings**, centang **Show "appsscript.json"
+   manifest file in editor**. Kembali ke **Editor**, buka `appsscript.json`,
+   lalu ganti seluruh isinya dengan isi `gas/appsscript.json`. Simpan.
+
+   Ini penting. Berkas itu menyatakan izin yang dibutuhkan aplikasi. Tanpa itu,
+   login akan gagal dengan pesan *"Anda tidak memiliki izin untuk memanggil
+   UrlFetchApp.fetch"*.
+
+4. Buka `Code.gs`, hapus semua kode di dalamnya, lalu tempel **seluruh isi**
+   `gas/Code.gs`. Simpan dengan `Ctrl+S`.
+
+5. Di dropdown fungsi, pilih **`izinkanSemua`**, klik **Run**.
+   - Pilih akunmu di layar izin
+   - Kalau muncul **"Google hasn't verified this app"**, klik **Advanced** →
+     **Go to … (unsafe)** → **Allow**
+
+   Fungsi ini membuat semua sheet, mengisi kategori awal, mendaftarkan emailmu
+   sebagai admin, dan meminta izin akses internet.
+
 6. **(Opsional, untuk notifikasi Telegram)** Isi dulu fungsi `setTelegram` di
    bagian atas file dengan token dan chat ID, lalu jalankan sekali. Setelah itu
    nilai di dalam kode boleh dikosongkan lagi — nilainya tersimpan di Script
@@ -91,11 +105,16 @@ finansial/
    Cara mendapatkan token dan chat ID ada di bagian **Notifikasi Telegram** di
    bawah.
 
-7. **Deploy → New deployment → Web app**
+7. **(Opsional, disarankan)** Di **Project Settings → Script properties**,
+   tambahkan `GOOGLE_CLIENT_ID` berisi Client ID Google-mu. Dengan itu backend
+   hanya menerima token login yang memang diterbitkan untuk aplikasimu.
+
+8. **Deploy → New deployment → Web app**
    - Description: terserah
    - **Execute as: Me**
    - **Who has access: Anyone**
-8. Salin **URL Web app** yang diakhiri `/exec`. Ini yang nanti jadi
+
+9. Salin **URL Web app** yang diakhiri `/exec`. Ini yang nanti jadi
    `NEXT_PUBLIC_GAS_URL`.
 
 > **Tes cepat:** buka URL `/exec` di browser. Harus muncul tulisan

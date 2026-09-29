@@ -203,6 +203,31 @@ function telegramStatus_() {
   };
 }
 
+/**
+ * Jalankan SEKALI dari editor Apps Script untuk meminta SELURUH izin yang
+ * dibutuhkan aplikasi — termasuk akses internet.
+ *
+ * Izin internet (script.external_request) dipakai untuk dua hal:
+ *   1. memverifikasi token login Google setiap kali ada permintaan masuk
+ *   2. mengirim notifikasi ke Telegram
+ *
+ * Kalau muncul peringatan "Google hasn't verified this app":
+ *   klik Advanced -> Go to <nama project> (unsafe) -> Allow
+ */
+function izinkanSemua() {
+  // membuat sheet, kategori awal, dan mendaftarkan pemilik
+  setup();
+
+  // sengaja memanggil UrlFetchApp supaya izin akses internet ikut diminta
+  UrlFetchApp.fetch(
+    'https://oauth2.googleapis.com/tokeninfo?id_token=percobaan',
+    { muteHttpExceptions: true }
+  );
+
+  return 'Izin lengkap. Lanjutkan: Deploy -> Manage deployments -> Edit -> ' +
+         'Version: New version -> Deploy.';
+}
+
 /* ============================== VERIFIKASI TOKEN ========================== */
 
 /**
