@@ -1,11 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, api } from "./api";
+import { ApiError, apiSekali, bersihkanCacheApi } from "./api";
+
+export const EVENT_RELOAD = "finansial:reload";
+export const EVENT_BOOTSTRAP = "finansial:bootstrap";
+
+/** Panggil setelah menyimpan data agar semua halaman memuat ulang. */
+export function picuMuatUlang() {
+  if (typeof window !== "undefined") {
+    bersihkanCacheApi();
+    window.dispatchEvent(new Event(EVENT_RELOAD));
+  }
+}
+
+/** Panggil setelah dompet atau kategori berubah. */
+export function picuBootstrap() {
+  if (typeof window !== "undefined") {
+    bersihkanCacheApi();
+    window.dispatchEvent(new Event(EVENT_BOOTSTRAP));
+    window.dispatchEvent(new Event(EVENT_RELOAD));
+  }
+}
 
 /**
  * Ambil data dari backend Apps Script.
  * `action` null berarti tidak memuat apa pun (mis. menunggu pilihan filter).
+ *
+ * Hasilnya disimpan sebentar oleh apiSekali(), jadi berpindah menu bolak-balik
+ * tidak memanggil server lagi. Setelah menyimpan data, cache dibuang lewat
+ * picuMuatUlang() sehingga angkanya selalu segar.
  */
 export function useApi<T = unknown>(
   action: string | null,
@@ -29,7 +53,11 @@ export function useApi<T = unknown>(
       setLoading(true);
       setError(null);
       try {
-        const hasil = await api<T>(action, JSON.parse(kunci));
+        /* versi > 0 berarti pemuatan ulang yang diminta pengguna atau
+           dipicu penyimpanan data: lewati cache */
+        const hasil = await apiSekali<T>(action, JSON.parse(kunci), {
+          paksa: versi > 0,
+        });
         if (!dibatalkan) setData(hasil);
       } catch (e) {
         if (!dibatalkan) {
@@ -55,22 +83,4 @@ export function useApi<T = unknown>(
   const reload = useCallback(() => setVersi((v) => v + 1), []);
 
   return { data, loading, error, reload };
-}
-
-export const EVENT_RELOAD = "finansial:reload";
-export const EVENT_BOOTSTRAP = "finansial:bootstrap";
-
-/** Panggil setelah menyimpan data agar semua halaman memuat ulang. */
-export function picuMuatUlang() {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(EVENT_RELOAD));
-  }
-}
-
-/** Panggil setelah dompet atau kategori berubah. */
-export function picuBootstrap() {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(EVENT_BOOTSTRAP));
-    window.dispatchEvent(new Event(EVENT_RELOAD));
-  }
 }

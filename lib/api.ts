@@ -207,6 +207,56 @@ async function sekali<T>(
   return json.data as T;
 }
 
+/**
+ * Permintaan identik dipakai bersama, dan hasilnya disimpan sebentar.
+ *
+ * Dua sebab:
+ *  1. Di mode pengembangan React memasang efek dua kali (StrictMode), jadi
+ *     tanpa ini setiap halaman memanggil Apps Script dua kali.
+ *  2. Satu panggilan ke Apps Script butuh 1-3 detik. Tanpa cache, berpindah
+ *     menu bolak-balik terasa lambat padahal datanya belum berubah.
+ *
+ * Cache dibuang setiap kali ada data yang disimpan (lihat picuMuatUlang),
+ * jadi angkanya tidak pernah basi setelah kamu mencatat sesuatu.
+ */
+const TTL_MS = 20000;
+const cacheHasil = new Map<string, { waktu: number; data: unknown }>();
+const sedangJalan = new Map<string, Promise<unknown>>();
+
+export function bersihkanCacheApi() {
+  cacheHasil.clear();
+}
+
+export function apiSekali<T = unknown>(
+  action: string,
+  payload: Record<string, unknown> = {},
+  opsi?: { paksa?: boolean }
+): Promise<T> {
+  const kunci = action + "|" + JSON.stringify(payload ?? null);
+
+  if (!opsi?.paksa) {
+    const tersimpan = cacheHasil.get(kunci);
+    if (tersimpan && Date.now() - tersimpan.waktu < TTL_MS) {
+      return Promise.resolve(tersimpan.data as T);
+    }
+
+    const ada = sedangJalan.get(kunci);
+    if (ada) return ada as Promise<T>;
+  }
+
+  const p = api<T>(action, payload)
+    .then((hasil) => {
+      cacheHasil.set(kunci, { waktu: Date.now(), data: hasil });
+      return hasil;
+    })
+    .finally(() => {
+      sedangJalan.delete(kunci);
+    });
+
+  sedangJalan.set(kunci, p);
+  return p;
+}
+
 /* ============================ AUTH: GOOGLE ============================ */
 
 let gisPromise: Promise<void> | null = null;
