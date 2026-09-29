@@ -170,12 +170,114 @@ function route_(action, p, user, who) {
 
 /** Jalankan sekali dari editor Apps Script. */
 function setup() {
-  Object.keys(HEADERS).forEach(function (name) { sheet_(name); });
+  var diperbaiki = [];
+
+  Object.keys(HEADERS).forEach(function (name) {
+    var sh = sheet_(name);
+    if (perbaikiHeader_(name, sh)) diperbaiki.push(name);
+  });
+
   seedKategori_();
   seedDompet_();
+
   var email = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
   if (email) upsertUser_({ email: email, nama: '', peran: 'admin', status: 'aktif' });
-  return 'Setup selesai. Pemilik: ' + email;
+
+  var pesan = 'Setup selesai. Pemilik: ' + email;
+  if (diperbaiki.length) {
+    pesan += ' | Header diperbaiki: ' + diperbaiki.join(', ');
+  }
+  return pesan;
+}
+
+/**
+ * Pastikan baris pertama sheet sama persis dengan HEADERS.
+ *
+ * Kalau sheet ini pernah dipakai proyek lain, header lamanya bisa berbeda.
+ * Akibatnya data ditulis dengan urutan yang benar tetapi dibaca memakai nama
+ * kolom yang salah — transaksinya ada di sheet, tapi tidak muncul di aplikasi.
+ */
+function perbaikiHeader_(name, sh) {
+  var head = HEADERS[name];
+  if (!head) return false;
+
+  var sekarang = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1))
+    .getValues()[0]
+    .map(function (h) { return String(h); });
+
+  if (sekarang.slice(0, head.length).join('|') === head.join('|')) return false;
+
+  sh.getRange(1, 1, 1, head.length).setValues([head]);
+  sh.setFrozenRows(1);
+  bersihkanCache_();
+  return true;
+}
+
+/**
+ * Alat diagnosis. Jalankan dari editor Apps Script kalau ada data yang sudah
+ * masuk ke sheet tetapi tidak muncul di aplikasi.
+ *
+ * Hasilnya muncul di panel Execution log, dan juga dikembalikan sebagai teks.
+ */
+function cekStruktur() {
+  var baris = [];
+  var ss = ss_();
+
+  baris.push('===== SPREADSHEET =====');
+  baris.push('Nama : ' + ss.getName());
+  baris.push('ID   : ' + ss.getId());
+  baris.push('');
+
+  baris.push('===== STRUKTUR SHEET =====');
+  Object.keys(HEADERS).forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh) {
+      baris.push(name + ' : SHEET TIDAK ADA');
+      return;
+    }
+    var head = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1))
+      .getValues()[0]
+      .map(function (h) { return String(h); });
+
+    var cocok = head.slice(0, HEADERS[name].length).join('|') === HEADERS[name].join('|');
+    baris.push(name + ' : ' + Math.max(sh.getLastRow() - 1, 0) + ' baris data, ' +
+               sh.getLastColumn() + ' kolom');
+    baris.push('   header sekarang : ' + head.join(' | '));
+    baris.push('   header seharusnya: ' + HEADERS[name].join(' | '));
+    baris.push('   COCOK : ' + (cocok ? 'YA' : '>>> TIDAK <<<'));
+    baris.push('');
+  });
+
+  baris.push('===== 3 BARIS TERAKHIR TRANSAKSI =====');
+  var tx = ss.getSheetByName(SH.TX);
+  if (tx && tx.getLastRow() > 1) {
+    var akhir = tx.getLastRow();
+    var mulai = Math.max(2, akhir - 2);
+    var nilai = tx.getRange(mulai, 1, akhir - mulai + 1, tx.getLastColumn()).getValues();
+
+    nilai.forEach(function (r, idx) {
+      var tgl = r[1];
+      var jenis = Object.prototype.toString.call(tgl) === '[object Date]' ? 'DATE' : typeof tgl;
+      baris.push('Baris ' + (mulai + idx) + ' [' + jenis + ']: ' +
+        r.map(function (v) {
+          return Object.prototype.toString.call(v) === '[object Date]'
+            ? 'DATE(' + Utilities.formatDate(v, TZ, 'yyyy-MM-dd') + ')'
+            : String(v);
+        }).join(' | '));
+    });
+
+    baris.push('');
+    baris.push('Nilai tanggal baris terakhir : ' +
+      (Object.prototype.toString.call(tx.getRange(akhir, 2).getValue()) === '[object Date]'
+        ? 'objek Date (inilah penyebabnya)'
+        : 'teks biasa (aman)'));
+  } else {
+    baris.push('(belum ada transaksi)');
+  }
+
+  var teks = baris.join('\n');
+  Logger.log(teks);
+  return teks;
 }
 
 /**
@@ -318,7 +420,7 @@ function bootstrap_(user) {
 function dashboard_(p) {
   var bulan = p && p.bulan ? String(p.bulan) : bulanOf_(todayStr_());
   var wallets = activeWallets_();
-  var txs = readAll_(SH.TX);
+  var txs = semuaTx_();
 
   var saldo = computeBalances_(wallets, txs);
   var totalSaldo = 0;
@@ -374,7 +476,7 @@ function dashboard_(p) {
 /* ============================== AKSI: TRANSAKSI =========================== */
 
 function txList_(p) {
-  var txs = readAll_(SH.TX);
+  var txs = semuaTx_();
   var from = p.from ? String(p.from) : '';
   var to = p.to ? String(p.to) : '';
   var walletId = p.walletId ? String(p.walletId) : '';
@@ -495,7 +597,7 @@ function txDelete_(p) {
   if (!id) throw new Error('ID transaksi kosong.');
   var row = findRowById_(SH.TX, id);
   if (!row) throw new Error('Transaksi tidak ditemukan.');
-  var bulan = bulanOf_(row.tanggal);
+  var bulan = bulanOf_(tanggalStr_(row.tanggal));
   deleteByKey_(SH.TX, 'id', id);
   var notif = cekBudgetDanKirim_(bulan);
   return { deleted: id, notif: notif };
@@ -531,7 +633,7 @@ function walletList_() {
     .map(normalizeWallet_)
     .sort(function (a, b) { return (a.urutan || 0) - (b.urutan || 0); });
 
-  var txs = readAll_(SH.TX);
+  var txs = semuaTx_();
   var saldo = computeBalances_(wallets, txs);
 
   var hitung = {};
@@ -593,7 +695,7 @@ function walletArchive_(p) {
 
   var aktif = num_(p.aktif) ? 1 : 0;
   if (!aktif) {
-    var txs = readAll_(SH.TX);
+    var txs = semuaTx_();
     var saldo = computeBalances_([w], txs)[w.id] || 0;
     if (Math.abs(saldo) > 0.5 && !p.paksa) {
       throw new Error('Saldo dompet ini masih ' + formatRp_(saldo) +
@@ -666,7 +768,7 @@ function categoryDelete_(p) {
 
 function budgetPage_(p) {
   var bulan = p && p.bulan ? String(p.bulan) : bulanOf_(todayStr_());
-  var txs = readAll_(SH.TX);
+  var txs = semuaTx_();
   var wallets = activeWallets_();
 
   return {
@@ -737,7 +839,7 @@ function report_(p) {
   var from = p.from ? String(p.from) : bulan + '-01';
   var to = p.to ? String(p.to) : akhirBulan_(bulan);
 
-  var txs = readAll_(SH.TX).filter(function (t) {
+  var txs = semuaTx_().filter(function (t) {
     var d = String(t.tanggal || '');
     return d >= from && d <= to;
   });
@@ -806,7 +908,7 @@ function report_(p) {
   var fromLalu = bulanLalu + '-01';
   var toLalu = akhirBulan_(bulanLalu);
   var masukLalu = 0, keluarLalu = 0;
-  readAll_(SH.TX).forEach(function (t) {
+  semuaTx_().forEach(function (t) {
     var d = String(t.tanggal || '');
     if (d < fromLalu || d > toLalu) return;
     var j = num_(t.jumlah), fee = num_(t.biaya_admin);
@@ -981,7 +1083,7 @@ function computeBalances_(wallets, txs) {
 /** Pemakaian per kategori pada satu bulan. Biaya admin masuk kategori sistem. */
 function pemakaianKategori_(bulan) {
   var map = {};
-  readAll_(SH.TX).forEach(function (t) {
+  semuaTx_().forEach(function (t) {
     if (bulanOf_(t.tanggal) !== bulan) return;
     var j = num_(t.jumlah), fee = num_(t.biaya_admin);
     if (t.tipe === 'Pengeluaran') {
@@ -1081,7 +1183,7 @@ function kategoriBreakdown_(bulan) {
 }
 
 function trendData_(n, sampaiBulan) {
-  var txs = readAll_(SH.TX);
+  var txs = semuaTx_();
   var out = [];
   var bulan = sampaiBulan || bulanOf_(todayStr_());
   var daftar = [];
@@ -1224,11 +1326,29 @@ function sheet_(name) {
   return sh;
 }
 
+/**
+ * Hasil baca disimpan selama SATU permintaan saja.
+ *
+ * Satu permintaan dashboard bisa membaca sheet Transaksi sampai empat kali
+ * (ringkasan, status budget, tren, rincian kategori). Tanpa ini Apps Script
+ * membaca ulang seluruh sheet setiap kali, dan aplikasinya terasa berat.
+ */
+var _cacheBaca = {};
+
+function bersihkanCache_() {
+  _cacheBaca = {};
+}
+
 function readAll_(name) {
+  if (_cacheBaca[name]) return _cacheBaca[name];
+
   var sh = sheet_(name);
   var lastRow = sh.getLastRow();
   var lastCol = sh.getLastColumn();
-  if (lastRow < 2 || lastCol < 1) return [];
+  if (lastRow < 2 || lastCol < 1) {
+    _cacheBaca[name] = [];
+    return _cacheBaca[name];
+  }
 
   var values = sh.getRange(1, 1, lastRow, lastCol).getValues();
   var head = values[0].map(function (h) { return String(h); });
@@ -1240,7 +1360,38 @@ function readAll_(name) {
     for (var j = 0; j < head.length; j++) o[head[j]] = row[j];
     out.push(o);
   }
+
+  _cacheBaca[name] = out;
   return out;
+}
+
+/**
+ * Seragamkan nilai tanggal menjadi teks 'YYYY-MM-DD'.
+ *
+ * Google Sheets sering mengubah teks '2026-09-29' menjadi nilai tanggal saat
+ * ditulis, sehingga ketika dibaca kembali yang didapat adalah objek Date.
+ * Perbandingan teks seperti "2026-09-29" < "2026-10-01" jadi kacau, dan
+ * transaksi yang sebenarnya ada di sheet bisa tersaring keluar dari daftar.
+ */
+function tanggalStr_(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  }
+  var s = String(v).trim();
+  var cocok = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (cocok) return cocok[1] + '-' + cocok[2] + '-' + cocok[3];
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+  return s;
+}
+
+/** Transaksi dengan kolom tanggal yang sudah diseragamkan. */
+function semuaTx_() {
+  return readAll_(SH.TX).map(function (t) {
+    if (t.tanggal !== undefined) t.tanggal = tanggalStr_(t.tanggal);
+    return t;
+  });
 }
 
 function append_(name, obj) {
@@ -1251,6 +1402,7 @@ function append_(name, obj) {
     return v === undefined || v === null ? '' : v;
   });
   sh.appendRow(baris);
+  bersihkanCache_();
   return obj;
 }
 
@@ -1286,6 +1438,7 @@ function updateByKey_(name, key, value, patch, extraKeyValue) {
       return v === undefined || v === null ? '' : v;
     });
     sh.getRange(rowIdx, 1, 1, head.length).setValues([baris]);
+    bersihkanCache_();
     return true;
   }
   return false;
@@ -1297,6 +1450,7 @@ function deleteByKey_(name, key, value) {
   for (var i = list.length - 1; i >= 0; i--) {
     if (String(list[i][key]) === String(value)) {
       sh.deleteRow(list[i]._row);
+      bersihkanCache_();
       return true;
     }
   }

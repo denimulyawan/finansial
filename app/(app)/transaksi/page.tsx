@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowLeftRight,
@@ -45,8 +45,16 @@ export default function HalamanTransaksi() {
   const [tipe, setTipe] = useState<"" | Tipe>("");
   const [walletId, setWalletId] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [tampilFilter, setTampilFilter] = useState(false);
+
+  /* Jeda 400 ms sebelum mencari. Tanpa ini setiap huruf yang diketik memicu
+     satu permintaan ke Apps Script, dan aplikasinya terasa sangat berat. */
+  useEffect(() => {
+    const jeda = setTimeout(() => setQ(qInput), 400);
+    return () => clearTimeout(jeda);
+  }, [qInput]);
 
   const [form, setForm] = useState<{ buka: boolean; awal: Tx | null }>({
     buka: false,
@@ -92,6 +100,7 @@ export default function HalamanTransaksi() {
     setTipe("");
     setWalletId("");
     setCategoryId("");
+    setQInput("");
     setQ("");
     setDari(AWAL_BULAN());
     setSampai(tanggalHariIni());
@@ -157,8 +166,8 @@ export default function HalamanTransaksi() {
             <input
               className="input pl-10"
               placeholder="Cari catatan, kategori, atau nominal…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+              value={qInput}
+              onChange={(e) => setQInput(e.target.value)}
             />
           </div>
 
