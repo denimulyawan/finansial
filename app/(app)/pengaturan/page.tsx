@@ -19,7 +19,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { ApiError, api, ambilTema, simpanTema } from "@/lib/api";
+import { ApiError, ambilTema, api, idBaru, simpanTema } from "@/lib/api";
 import { picuBootstrap, useApi } from "@/lib/hooks";
 import { Avatar, useAuth } from "@/components/auth";
 import { useToast } from "@/components/toast";
@@ -653,7 +653,7 @@ function FormKategori({
     setSedang(true);
     try {
       await api("category.save", {
-        category: { id: awal?.id, nama, tipe, warna },
+        category: { id: awal?.id || idBaru(), nama, tipe, warna },
       });
       toast.sukses("Kategori disimpan.");
       onSelesai();

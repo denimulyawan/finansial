@@ -8,7 +8,7 @@ import {
   Loader2,
   Save,
 } from "lucide-react";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, idBaru } from "@/lib/api";
 import { picuMuatUlang } from "@/lib/hooks";
 import { Field, RupiahInput } from "@/components/ui";
 import { useToast } from "@/components/toast";
@@ -72,7 +72,7 @@ export default function TxForm({
     try {
       const hasil = await api<{ notif?: { terkirim?: number } }>("tx.save", {
         transaction: {
-          id: awal?.id,
+          id: awal?.id || idBaru(),
           tipe,
           tanggal,
           jumlah,

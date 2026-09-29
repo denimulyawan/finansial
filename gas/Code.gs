@@ -595,8 +595,11 @@ function txSave_(p, user) {
 function txDelete_(p) {
   var id = String(p.id || '');
   if (!id) throw new Error('ID transaksi kosong.');
+
   var row = findRowById_(SH.TX, id);
-  if (!row) throw new Error('Transaksi tidak ditemukan.');
+  /* sudah tidak ada berarti kemungkinan pengiriman ulang; anggap berhasil */
+  if (!row) return { deleted: id, sudahTidakAda: true };
+
   var bulan = bulanOf_(tanggalStr_(row.tanggal));
   deleteByKey_(SH.TX, 'id', id);
   var notif = cekBudgetDanKirim_(bulan);

@@ -20,6 +20,19 @@ export function adaKonfigurasi(): boolean {
   return !!GAS_URL && !GAS_URL.includes("XXXX");
 }
 
+/**
+ * ID dibuat di sisi browser, bukan di server.
+ *
+ * Apps Script kadang menjatuhkan isi POST dan mengubahnya menjadi GET,
+ * sehingga permintaan yang sebenarnya sudah berhasil terlihat gagal lalu
+ * dikirim ulang. Dengan ID yang sama, pengiriman ulang hanya memperbarui
+ * baris yang sudah ada — bukan menambah baris baru (transaksi dobel).
+ */
+export function idBaru(): string {
+  const acak = () => Math.random().toString(36).slice(2, 10);
+  return (Date.now().toString(36) + acak() + acak()).slice(0, 16);
+}
+
 export function ambilToken(): string | null {
   if (typeof window === "undefined") return null;
   try {

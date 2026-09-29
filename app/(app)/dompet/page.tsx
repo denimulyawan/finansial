@@ -14,7 +14,7 @@ import {
   Smartphone,
   Wallet as WalletIcon,
 } from "lucide-react";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, idBaru } from "@/lib/api";
 import { picuBootstrap, useApi } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Field, Galat, Kosong, Modal, PageHeader, RupiahInput, Skeleton } from "@/components/ui";
@@ -307,7 +307,7 @@ function FormDompet({
     try {
       await api("wallet.save", {
         wallet: {
-          id: awal?.id,
+          id: awal?.id || idBaru(),
           nama,
           jenis,
           saldo_awal: saldoAwal,
