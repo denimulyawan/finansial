@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
   BarChart3,
-  ChevronLeft,
-  ChevronRight,
+
   HandCoins,
   LayoutDashboard,
   LogOut,
@@ -65,7 +64,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setMenuUser(false);
   }, [path]);
 
-  function toggleCiut() {
+  /* Satu tombol untuk dua keadaan:
+     jendela lebar  -> sembunyikan / tampilkan sidebar
+     jendela sempit -> buka menu geser dari kiri */
+  function toggleMenu() {
+    if (!window.matchMedia("(min-width: 1024px)").matches) {
+      setDrawer(true);
+      return;
+    }
     setCiut((c) => {
       const baru = !c;
       try {
@@ -170,17 +176,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           }}
         >
           <button
-            onClick={toggleCiut}
-            className="hidden lg:grid btn btn-ghost btn-icon btn-sm place-items-center"
-            title={ciut ? "Show menu" : "Hide menu"}
-          >
-            {ciut ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
-          </button>
-
-          <button
-            onClick={() => setDrawer(true)}
-            className="lg:hidden grid btn btn-ghost btn-icon btn-sm place-items-center"
-            aria-label="Open menu"
+            onClick={toggleMenu}
+            className="grid btn btn-ghost btn-icon btn-sm place-items-center"
+            aria-label="Menu"
+            title="Menu"
           >
             <Menu size={17} />
           </button>
