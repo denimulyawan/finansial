@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Seluruh gaya kustom ditaruh di dalam layer components supaya class utility
+   Tailwind kembali menang. Sebelumnya gaya di luar layer selalu menang,
+   sehingga hidden / lg:grid / lg:hidden dan pl-* tidak pernah terpakai. */
+@layer components {
+
 /* ============================== DESIGN TOKENS =============================
    Dasar putih, tetapi halaman diberi semburat biru muda supaya kartu putih
    terlihat menonjol. Biru dipakai sebagai aksen utama, ditambah pastel lembut
@@ -333,3 +338,4 @@ body {
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
 input, select, textarea, button { font-family: inherit; }
+}
