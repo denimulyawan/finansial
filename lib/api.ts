@@ -86,7 +86,29 @@ export function simpanTema(t: "light" | "dark") {
   }
 }
 
-/** Panggil API Apps Script. Melempar ApiError bila gagal. */
+/**
+ * Panggil API Apps Script. Melempar ApiError bila gagal.
+ *
+ * Gangguan sementara dicoba ulang otomatis. Ini perlu karena Apps Script
+ * mengalihkan setiap POST ke URL script.googleusercontent.com yang hanya
+ * berlaku sekali dan cepat kedaluwarsa, sehingga sesekali balas 404 atau
+ * halaman HTML. Mengulang permintaan hampir selalu berhasil.
+ */
+const MAKS_COBA = 3;
+const JEDA_MS = 500;
+
+function bolehDiulang(kode: string): boolean {
+  return (
+    kode === "JARINGAN" ||
+    kode === "RESPONS_TIDAK_VALID" ||
+    kode === "SEMENTARA"
+  );
+}
+
+function tunggu(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export async function api<T = unknown>(
   action: string,
   payload: Record<string, unknown> = {}
@@ -98,6 +120,34 @@ export async function api<T = unknown>(
     );
   }
 
+  let galatTerakhir: ApiError | null = null;
+
+  for (let percobaan = 1; percobaan <= MAKS_COBA; percobaan++) {
+    try {
+      return await sekali<T>(action, payload);
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError("ERROR", String(e));
+      if (!bolehDiulang(err.code)) throw err;
+
+      galatTerakhir = err;
+      if (percobaan < MAKS_COBA) {
+        await tunggu(JEDA_MS * percobaan);
+      }
+    }
+  }
+
+  throw new ApiError(
+    "SEMENTARA",
+    galatTerakhir?.message
+      ? `${galatTerakhir.message} Sudah dicoba ${MAKS_COBA} kali.`
+      : "Server tidak merespons setelah beberapa kali percobaan."
+  );
+}
+
+async function sekali<T>(
+  action: string,
+  payload: Record<string, unknown>
+): Promise<T> {
   const body = JSON.stringify({
     action,
     payload,
@@ -116,7 +166,14 @@ export async function api<T = unknown>(
   } catch {
     throw new ApiError(
       "JARINGAN",
-      "Tidak bisa menghubungi server. Periksa koneksi internet lalu coba lagi."
+      "Tidak bisa menghubungi server. Periksa koneksi internet."
+    );
+  }
+
+  if (!res.ok) {
+    throw new ApiError(
+      "SEMENTARA",
+      `Server membalas kode ${res.status}.`
     );
   }
 
@@ -126,7 +183,7 @@ export async function api<T = unknown>(
   } catch {
     throw new ApiError(
       "RESPONS_TIDAK_VALID",
-      "Balasan server tidak dikenali. Biasanya karena URL Apps Script salah, atau deployment belum di-set ke akses \"Anyone\"."
+      "Balasan server tidak dikenali. Biasanya gangguan sesaat dari Apps Script, atau URL deployment salah."
     );
   }
 
