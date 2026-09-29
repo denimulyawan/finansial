@@ -1,29 +1,45 @@
 @import "tailwindcss";
 
-/* ============================== DESIGN TOKENS ============================= */
+/* ============================== DESIGN TOKENS =============================
+   Dasar putih, tetapi halaman diberi semburat biru muda supaya kartu putih
+   terlihat menonjol. Biru dipakai sebagai aksen utama, ditambah pastel lembut
+   untuk kartu ringkasan.
+   ========================================================================= */
 :root {
-  --bg: #ffffff;
+  --bg: #f4f7fc;
   --surface: #ffffff;
-  --surface-2: #f7f7f9;
-  --surface-3: #efeff3;
-  --border: #e7e7ec;
-  --border-soft: #f1f1f5;
-  --text: #101014;
-  --text-2: #55555f;
-  --muted: #8d8d99;
-  --accent: #4f46e5;
-  --accent-2: #6259ea;
-  --accent-soft: #eef0ff;
+  --surface-2: #f7faff;
+  --surface-3: #eaf1fa;
+  --border: #e0e8f4;
+  --border-soft: #eef3fa;
+
+  --text: #0d1526;
+  --text-2: #47536b;
+  --muted: #7c89a0;
+
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
+  --accent-soft: #e8f0ff;
+  --accent-ring: rgba(37, 99, 235, .16);
+
   --success: #059669;
   --warning: #d97706;
   --kritis: #ea580c;
   --danger: #dc2626;
-  --info: #2563eb;
-  --shadow-xs: 0 1px 2px rgba(16, 16, 20, .04);
-  --shadow-sm: 0 1px 3px rgba(16, 16, 20, .06);
-  --shadow: 0 6px 20px -8px rgba(16, 16, 20, .14);
-  --shadow-lg: 0 28px 60px -24px rgba(16, 16, 20, .26);
-  --radius: 14px;
+  --info: #0284c7;
+
+  --tone-blue: #e9f1ff;
+  --tone-green: #e6f9f0;
+  --tone-red: #fdecec;
+  --tone-amber: #fdf4e3;
+  --tone-violet: #eeebff;
+
+  --shadow-xs: 0 1px 2px rgba(13, 21, 38, .04);
+  --shadow-sm: 0 1px 3px rgba(13, 21, 38, .05), 0 1px 2px rgba(13, 21, 38, .03);
+  --shadow: 0 6px 20px -8px rgba(13, 21, 38, .14);
+  --shadow-lg: 0 30px 64px -24px rgba(13, 21, 38, .28);
+
+  --radius: 16px;
   color-scheme: light;
 }
 
@@ -43,15 +59,15 @@ body {
 ::selection { background: var(--accent); color: #fff; }
 
 /* ============================== SCROLLBAR ============================= */
-::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #dcdce3;
+  background: #d3ddec;
   border-radius: 99px;
-  border: 2.5px solid transparent;
+  border: 3px solid transparent;
   background-clip: content-box;
 }
-::-webkit-scrollbar-thumb:hover { background: #c6c6d0; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #bcc9dd; background-clip: content-box; }
 
 /* ================================ CARD =============================== */
 .card {
@@ -60,9 +76,23 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
 }
-.card-lg { border-radius: 16px; box-shadow: var(--shadow-sm); }
-.card-pad { padding: 18px; }
-@media (max-width: 640px) { .card-pad { padding: 15px; } }
+.card-lg { border-radius: 18px; box-shadow: var(--shadow-sm); }
+.card-pad { padding: 20px; }
+@media (max-width: 640px) { .card-pad { padding: 16px; } }
+
+/* kartu ringkasan berwarna lembut */
+.tile {
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-xs);
+}
+.tile-blue   { background: var(--tone-blue);   border-color: #d6e4ff; }
+.tile-green  { background: var(--tone-green);  border-color: #cbefdd; }
+.tile-red    { background: var(--tone-red);    border-color: #f8d9d9; }
+.tile-amber  { background: var(--tone-amber);  border-color: #f7e5c3; }
+.tile-violet { background: var(--tone-violet); border-color: #ddd8ff; }
+@media (max-width: 640px) { .tile { padding: 15px; border-radius: 16px; } }
 
 .surface-2 { background: var(--surface-2); }
 .surface-3 { background: var(--surface-3); }
@@ -71,7 +101,7 @@ body {
 .muted { color: var(--muted); }
 .text-2 { color: var(--text-2); }
 .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.title { letter-spacing: -0.021em; font-weight: 640; }
+.title { letter-spacing: -0.022em; font-weight: 650; }
 
 /* =============================== BUTTON ============================== */
 .btn {
@@ -80,10 +110,10 @@ body {
   justify-content: center;
   gap: 7px;
   height: 38px;
-  padding: 0 14px;
-  border-radius: 10px;
+  padding: 0 15px;
+  border-radius: 11px;
   font-size: 13.5px;
-  font-weight: 550;
+  font-weight: 560;
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform .12s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
@@ -93,109 +123,111 @@ body {
 .btn:active { transform: scale(.975); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 6px 16px -8px rgba(37, 99, 235, .75); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-2); }
 
 .btn-ghost { background: var(--surface); color: var(--text-2); border-color: var(--border); }
-.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); border-color: #cfdbec; }
 
-.btn-danger { background: color-mix(in srgb, var(--danger) 9%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 22%, transparent); }
-.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+.btn-danger { background: #fdecec; color: var(--danger); border-color: #f8d9d9; }
+.btn-danger:hover:not(:disabled) { background: #fbdcdc; }
 
-.btn-sm { height: 31px; padding: 0 10px; font-size: 12.5px; border-radius: 9px; gap: 5px; }
+.btn-sm { height: 32px; padding: 0 11px; font-size: 12.5px; border-radius: 9px; gap: 5px; }
 .btn-icon { width: 38px; padding: 0; }
-.btn-icon.btn-sm { width: 31px; }
+.btn-icon.btn-sm { width: 32px; }
 
 /* ================================ FORM =============================== */
 .label {
   display: block;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 560;
   color: var(--text-2);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .input, .select, .textarea {
   width: 100%;
-  height: 40px;
-  padding: 0 12px;
+  height: 42px;
+  padding: 0 13px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 11px;
   color: var(--text);
   font-size: 14px;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
   font-family: inherit;
 }
-.textarea { height: auto; min-height: 62px; padding: 10px 12px; resize: vertical; line-height: 1.45; }
+.textarea { height: auto; min-height: 64px; padding: 10px 13px; resize: vertical; line-height: 1.45; }
 .input:focus, .select:focus, .textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
+  box-shadow: 0 0 0 3.5px var(--accent-ring);
 }
-.input::placeholder, .textarea::placeholder { color: var(--muted); }
+.input::placeholder, .textarea::placeholder { color: #9aa6ba; }
 .select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%238d8d99' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%237c89a0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 11px center;
+  background-position: right 12px center;
   padding-right: 34px;
 }
+
 /* Jarak kiri ditulis di sini, bukan lewat class utility Tailwind: gaya kustom
    di berkas ini berada di luar @layer sehingga selalu menang atas utility. */
-.input-rupiah { padding-left: 42px; font-variant-numeric: tabular-nums; font-weight: 620; font-size: 17px; height: 46px; }
-.input-cari { padding-left: 34px; }
+.input-rupiah { padding-left: 43px; font-variant-numeric: tabular-nums; font-weight: 620; font-size: 17px; height: 48px; }
+.input-cari { padding-left: 36px; }
 
 /* ============================== BADGE ================================ */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 21px;
-  padding: 0 8px;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: .01em;
   white-space: nowrap;
 }
-.badge-aman { background: color-mix(in srgb, var(--success) 11%, transparent); color: var(--success); }
-.badge-warning { background: color-mix(in srgb, var(--warning) 13%, transparent); color: var(--warning); }
-.badge-kritis { background: color-mix(in srgb, var(--kritis) 13%, transparent); color: var(--kritis); }
-.badge-over { background: color-mix(in srgb, var(--danger) 11%, transparent); color: var(--danger); }
+.badge-aman { background: #e6f9f0; color: var(--success); }
+.badge-warning { background: #fdf4e3; color: var(--warning); }
+.badge-kritis { background: #fdeee5; color: var(--kritis); }
+.badge-over { background: #fdecec; color: var(--danger); }
 .badge-netral { background: var(--surface-3); color: var(--text-2); }
 
 /* ============================== PROGRESS ============================= */
-.bar { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.bar { height: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
 .bar > i { display: block; height: 100%; border-radius: 99px; transition: width .5s cubic-bezier(.22,1,.36,1); }
 
 /* ============================== ANIMATION ============================ */
 @keyframes fade-up { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes scale-in { from { opacity: 0; transform: scale(.97) translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .anim-up { animation: fade-up .3s cubic-bezier(.22,1,.36,1) both; }
 .anim-in { animation: fade-in .22s ease both; }
-.anim-scale { animation: scale-in .24s cubic-bezier(.22,1,.36,1) both; }
+.anim-scale { animation: pop-in .2s cubic-bezier(.22,1,.36,1) both; }
 
 .skeleton {
   position: relative;
   overflow: hidden;
   background: var(--surface-3);
-  border-radius: 7px;
+  border-radius: 8px;
 }
 .skeleton::after {
   content: "";
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
   animation: shimmer 1.4s infinite;
 }
 
 .spinner {
-  width: 15px; height: 15px;
+  width: 16px; height: 16px;
   border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
   border-top-color: currentColor;
   border-radius: 50%;
@@ -207,27 +239,32 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(16, 16, 20, .38);
+  background: rgba(13, 21, 38, .42);
+  backdrop-filter: blur(2px);
   z-index: 40;
   animation: fade-in .18s ease both;
 }
 
-/* Modal dibuat muat di layar: header dan footer tetap, isi tengah mengalir */
+/* ---------------------------------------------------------------------
+   MODAL — dipusatkan dengan inset + margin auto, BUKAN dengan transform.
+   Animasi yang berakhir di transform:none akan menghapus translate(-50%,-50%)
+   dan membuat modal meleset dari tengah layar.
+   --------------------------------------------------------------------- */
 .modal {
   position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
   z-index: 50;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  max-height: min(88vh, 720px);
+  max-height: min(88vh, 780px);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: var(--shadow-lg);
-  animation: scale-in .24s cubic-bezier(.22,1,.36,1) both;
   overflow: hidden;
+  animation: pop-in .22s cubic-bezier(.22,1,.36,1) both;
 }
 .modal-head {
   flex: none;
@@ -235,13 +272,13 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--border-soft);
 }
 .modal-body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 18px;
+  padding: 20px;
 }
 .modal-foot {
   flex: none;
@@ -249,24 +286,23 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
   background: var(--surface);
 }
 @media (max-width: 640px) {
   .modal {
-    left: 0;
-    right: 0;
-    top: auto;
-    bottom: 0;
-    transform: none;
+    inset: auto 0 0 0;
+    margin: 0;
     width: 100% !important;
     max-height: 92vh;
-    border-radius: 18px 18px 0 0;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    animation: slide-up .26s cubic-bezier(.22,1,.36,1) both;
   }
-  .modal-head { padding: 14px 16px; }
+  .modal-head { padding: 15px 16px; }
   .modal-body { padding: 16px; }
-  .modal-foot { padding: 12px 16px; }
+  .modal-foot { padding: 13px 16px; }
 }
 
 /* =============================== TABLE =============================== */
@@ -278,19 +314,19 @@ body {
   text-transform: uppercase;
   letter-spacing: .05em;
   color: var(--muted);
-  padding: 9px 13px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--surface-2);
   position: sticky;
   top: 0;
   z-index: 1;
 }
-.tbl td { padding: 11px 13px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+.tbl td { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .tbl tbody tr:hover td { background: var(--surface-2); }
 .tbl tbody tr:last-child td { border-bottom: none; }
 
 /* ================================ MISC =============================== */
-.divider { height: 1px; background: var(--border); }
+.divider { height: 1px; background: var(--border-soft); }
 .hide-scroll::-webkit-scrollbar { display: none; }
 .hide-scroll { scrollbar-width: none; }
 

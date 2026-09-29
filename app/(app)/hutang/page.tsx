@@ -214,7 +214,7 @@ function Summary({
   Ikon: React.ComponentType<{ size?: number }>;
 }) {
   return (
-    <div className="card card-lg card-pad">
+    <div className="tile anim-up" style={{ background: `color-mix(in srgb, ${warna} 8%, #fff)`, borderColor: `color-mix(in srgb, ${warna} 18%, #fff)` }}>
       <div className="flex items-center gap-2.5 mb-3">
         <span
           className="grid place-items-center w-8 h-8 rounded-[9px]"

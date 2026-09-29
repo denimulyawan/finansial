@@ -346,7 +346,7 @@ function StatTile({
   Ikon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 }) {
   return (
-    <div className="card card-pad anim-up">
+    <div className="tile anim-up" style={{ background: `color-mix(in srgb, ${warna} 8%, #fff)`, borderColor: `color-mix(in srgb, ${warna} 18%, #fff)` }}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] font-medium muted truncate">{label}</span>
         <span
@@ -380,7 +380,7 @@ function BudgetTile({
   const total = data?.budgets.total;
 
   return (
-    <div className="card card-pad anim-up">
+    <div className="tile anim-up" style={{ background: "color-mix(in srgb, var(--accent) 8%, #fff)", borderColor: "color-mix(in srgb, var(--accent) 18%, #fff)" }}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] font-medium muted truncate">
           Budget left

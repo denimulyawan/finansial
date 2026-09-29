@@ -512,7 +512,7 @@ function Tile({
   Ikon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 }) {
   return (
-    <div className="card card-pad">
+    <div className="tile anim-up" style={{ background: `color-mix(in srgb, ${warna} 8%, #fff)`, borderColor: `color-mix(in srgb, ${warna} 18%, #fff)` }}>
       <div className="flex items-center gap-1.5 mb-2">
         <span style={{ color: warna }}>
           <Ikon size={14} strokeWidth={2.5} />
