@@ -6,43 +6,31 @@ import {
   CheckCircle2,
   Database,
   ExternalLink,
-  Moon,
-  Palette,
   Pencil,
   Plus,
   Send,
   ShieldCheck,
-  Sun,
   Tags,
   Trash2,
   TriangleAlert,
   UserPlus,
   Users,
 } from "lucide-react";
-import { ApiError, ambilTema, api, idBaru, simpanTema } from "@/lib/api";
+import { ApiError, api, idBaru } from "@/lib/api";
 import { picuBootstrap, useApi } from "@/lib/hooks";
 import { Avatar, useAuth } from "@/components/auth";
 import { useToast } from "@/components/toast";
-import {
-  Card,
-  Field,
-  Galat,
-  Kosong,
-  Modal,
-  PageHeader,
-  Skeleton,
-} from "@/components/ui";
+import { Card, Field, Galat, Kosong, Modal, PageHeader, Skeleton } from "@/components/ui";
 import { labelTanggal } from "@/lib/format";
 import type { Category, User } from "@/lib/types";
 
-type Tab = "profil" | "pengguna" | "kategori" | "notifikasi" | "tampilan" | "data";
+type Tab = "profil" | "pengguna" | "kategori" | "notifikasi" | "data";
 
 const TAB: { v: Tab; l: string; Ikon: React.ComponentType<{ size?: number }> }[] = [
-  { v: "profil", l: "Profil", Ikon: ShieldCheck },
-  { v: "pengguna", l: "Pengguna", Ikon: Users },
-  { v: "kategori", l: "Kategori", Ikon: Tags },
-  { v: "notifikasi", l: "Notifikasi", Ikon: Bell },
-  { v: "tampilan", l: "Tampilan", Ikon: Palette },
+  { v: "profil", l: "Profile", Ikon: ShieldCheck },
+  { v: "pengguna", l: "Users", Ikon: Users },
+  { v: "kategori", l: "Categories", Ikon: Tags },
+  { v: "notifikasi", l: "Alerts", Ikon: Bell },
   { v: "data", l: "Data", Ikon: Database },
 ];
 
@@ -57,7 +45,7 @@ export default function HalamanPengaturan() {
 
   return (
     <>
-      <PageHeader judul="Pengaturan" sub="Kelola akun, kategori, dan notifikasi" />
+      <PageHeader judul="Settings" />
 
       <div className="flex gap-1.5 mb-5 overflow-x-auto hide-scroll pb-1">
         {TAB.map(({ v, l, Ikon }) => {
@@ -66,14 +54,14 @@ export default function HalamanPengaturan() {
             <button
               key={v}
               onClick={() => setTab(v)}
-              className="flex items-center gap-2 h-9 px-3.5 rounded-[10px] text-[13px] font-medium whitespace-nowrap transition shrink-0"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-medium whitespace-nowrap transition shrink-0"
               style={{
                 background: aktif ? "var(--accent-soft)" : "var(--surface)",
                 color: aktif ? "var(--accent)" : "var(--text-2)",
                 border: `1px solid ${aktif ? "transparent" : "var(--border)"}`,
               }}
             >
-              <Ikon size={15} />
+              <Ikon size={14} />
               {l}
             </button>
           );
@@ -84,13 +72,12 @@ export default function HalamanPengaturan() {
       {tab === "pengguna" && <BagianPengguna />}
       {tab === "kategori" && <BagianKategori />}
       {tab === "notifikasi" && <BagianNotifikasi />}
-      {tab === "tampilan" && <BagianTampilan />}
       {tab === "data" && <BagianData />}
     </>
   );
 }
 
-/* ================================= PROFIL ================================= */
+/* ================================= PROFILE ================================ */
 
 function BagianProfil() {
   const toast = useToast();
@@ -105,10 +92,10 @@ function BagianProfil() {
       await api("users.save", {
         user: { email: user.email, nama, peran: user.peran, status: user.status },
       });
-      toast.sukses("Profil diperbarui.");
+      toast.sukses("Profile updated.");
       await muatUlang();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
       setSedang(false);
     }
@@ -117,58 +104,57 @@ function BagianProfil() {
   return (
     <div className="grid lg:grid-cols-2 gap-4">
       <Card besar>
-        <div className="flex items-center gap-4 mb-5">
-          <Avatar nama={user?.nama || user?.email || "?"} size={56} />
+        <div className="flex items-center gap-3.5 mb-5">
+          <Avatar nama={user?.nama || user?.email || "?"} size={52} />
           <div className="min-w-0">
-            <p className="font-semibold text-[16px] title truncate">
-              {user?.nama || "Tanpa nama"}
+            <p className="font-semibold text-[15px] title truncate">
+              {user?.nama || "No name"}
             </p>
-            <p className="text-[13px] muted truncate">{user?.email}</p>
+            <p className="text-[12.5px] muted truncate">{user?.email}</p>
           </div>
         </div>
 
-        <Field label="Nama tampilan" hint="Dipakai di sapaan dan inisial avatar.">
+        <Field label="Display name">
           <input
             className="input"
             value={nama}
-            placeholder="Nama kamu"
+            placeholder="Your name"
             onChange={(e) => setNama(e.target.value)}
           />
         </Field>
 
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end mt-3.5">
           <button className="btn btn-primary btn-sm" onClick={simpan} disabled={sedang}>
-            {sedang ? "Menyimpan…" : "Simpan"}
+            {sedang ? "Saving…" : "Save"}
           </button>
         </div>
       </Card>
 
       <Card besar>
-        <h2 className="text-[15px] font-semibold title mb-4">Keamanan akun</h2>
-        <div className="space-y-3 text-[13.5px]">
+        <h2 className="text-[14.5px] font-semibold title mb-4">Security</h2>
+        <div className="space-y-3">
           <BarisInfo
-            ikon={<CheckCircle2 size={16} />}
-            judul="Masuk dengan Google"
-            isi="Tidak ada kata sandi yang disimpan di mana pun. Google yang memverifikasi identitasmu setiap kali masuk."
+            ikon={<CheckCircle2 size={15} />}
+            judul="Google sign-in"
+            isi="No password is stored anywhere."
             warna="var(--success)"
           />
           <BarisInfo
-            ikon={<ShieldCheck size={16} />}
-            judul="Hanya email terdaftar"
-            isi="Orang yang punya akun Google lain tetap tidak bisa masuk kalau emailnya belum kamu daftarkan di tab Pengguna."
+            ikon={<ShieldCheck size={15} />}
+            judul="Registered emails only"
+            isi="Other Google accounts are rejected."
             warna="var(--accent)"
           />
           <BarisInfo
-            ikon={<Database size={16} />}
-            judul="Data milikmu sendiri"
-            isi="Semua catatan tersimpan di Google Sheets milikmu. Tidak ada pihak lain yang menyimpannya."
+            ikon={<Database size={15} />}
+            judul="Your own data"
+            isi="Everything lives in your Google Sheet."
             warna="var(--info)"
           />
         </div>
-
         {user?.last_login && (
-          <p className="text-[12px] muted mt-5">
-            Terakhir masuk: {user.last_login.replace("T", " ")}
+          <p className="text-[11.5px] muted mt-5">
+            Last sign-in: {user.last_login.replace("T", " ")}
           </p>
         )}
       </Card>
@@ -188,19 +174,19 @@ function BarisInfo({
   warna: string;
 }) {
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2.5">
       <span className="shrink-0 mt-0.5" style={{ color: warna }}>
         {ikon}
       </span>
       <div>
-        <p className="font-medium">{judul}</p>
-        <p className="muted text-[12.5px] mt-0.5 leading-relaxed">{isi}</p>
+        <p className="text-[13px] font-medium">{judul}</p>
+        <p className="muted text-[12px] mt-0.5">{isi}</p>
       </div>
     </div>
   );
 }
 
-/* ================================ PENGGUNA ================================ */
+/* ================================== USERS ================================= */
 
 function BagianPengguna() {
   const toast = useToast();
@@ -218,11 +204,11 @@ function BagianPengguna() {
     if (!hapus) return;
     try {
       await api("users.delete", { email: hapus.email });
-      toast.sukses("Pengguna dihapus.");
+      toast.sukses("User removed.");
       setHapus(null);
       reload();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menghapus.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not remove.");
     }
   }
 
@@ -230,17 +216,12 @@ function BagianPengguna() {
     <>
       <Card besar pad={false}>
         <div className="flex items-center justify-between p-5 pb-3">
-          <div>
-            <h2 className="text-[15px] font-semibold title">Pengguna</h2>
-            <p className="text-[12.5px] muted mt-0.5">
-              Hanya email di daftar ini yang bisa membuka aplikasi
-            </p>
-          </div>
+          <h2 className="text-[14.5px] font-semibold title">Users</h2>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setForm({ buka: true, awal: null })}
           >
-            <UserPlus size={15} /> Tambah
+            <UserPlus size={14} /> Add
           </button>
         </div>
 
@@ -253,46 +234,46 @@ function BagianPengguna() {
         {loading ? (
           <div className="p-5 space-y-3">
             {[0, 1].map((i) => (
-              <Skeleton key={i} className="h-14 w-full" />
+              <Skeleton key={i} className="h-13 w-full" style={{ height: 52 }} />
             ))}
           </div>
         ) : (
-          <div className="px-5 pb-5 space-y-2">
+          <div className="px-5 pb-5 space-y-1.5">
             {users.map((u) => {
               const diri = u.email === saya?.email;
               return (
                 <div
                   key={u.email}
-                  className="flex items-center gap-3 p-3 rounded-xl"
+                  className="flex items-center gap-3 p-2.5 rounded-xl"
                   style={{ background: "var(--surface-2)" }}
                 >
-                  <Avatar nama={u.nama || u.email} size={38} />
+                  <Avatar nama={u.nama || u.email} size={34} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-medium truncate flex items-center gap-2">
-                      {u.nama || "Tanpa nama"}
-                      {diri && <span className="badge badge-netral">Kamu</span>}
+                    <p className="text-[13px] font-medium truncate flex items-center gap-1.5">
+                      {u.nama || "No name"}
+                      {diri && <span className="badge badge-netral">You</span>}
                       {String(u.status).toLowerCase() !== "aktif" && (
-                        <span className="badge badge-over">Nonaktif</span>
+                        <span className="badge badge-over">Inactive</span>
                       )}
                     </p>
-                    <p className="text-[11.5px] muted truncate">{u.email}</p>
+                    <p className="text-[11px] muted truncate">{u.email}</p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       className="btn btn-ghost btn-icon btn-sm"
-                      title="Ubah"
+                      title="Edit"
                       onClick={() => setForm({ buka: true, awal: u })}
                     >
-                      <Pencil size={14} />
+                      <Pencil size={13} />
                     </button>
                     {!diri && (
                       <button
                         className="btn btn-ghost btn-icon btn-sm"
-                        title="Hapus"
+                        title="Remove"
                         style={{ color: "var(--danger)" }}
                         onClick={() => setHapus(u)}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     )}
                   </div>
@@ -303,28 +284,11 @@ function BagianPengguna() {
         )}
       </Card>
 
-      <div
-        className="rounded-2xl p-4 mt-4 text-[13px] leading-relaxed"
-        style={{
-          background: "var(--accent-soft)",
-          border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
-        }}
-      >
-        <p className="font-semibold mb-1" style={{ color: "var(--accent)" }}>
-          Cara menambah pasangan
-        </p>
-        <p className="text-2">
-          Klik <b>Tambah</b>, masukkan <b>email Google</b> pasanganmu, lalu
-          minta dia membuka aplikasi dan masuk dengan akun itu. Kalian berdua
-          melihat pembukuan yang sama.
-        </p>
-      </div>
-
       <Modal
         buka={form.buka}
         onTutup={() => setForm({ buka: false, awal: null })}
-        judul={form.awal ? "Ubah pengguna" : "Tambah pengguna"}
-        lebar={480}
+        judul={form.awal ? "Edit user" : "Add user"}
+        lebar={440}
       >
         <FormPengguna
           awal={form.awal}
@@ -340,23 +304,23 @@ function BagianPengguna() {
       <Modal
         buka={!!hapus}
         onTutup={() => setHapus(null)}
-        judul="Hapus pengguna?"
-        lebar={420}
+        judul="Remove user?"
+        lebar={400}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setHapus(null)}>
-              Batal
+              Cancel
             </button>
             <button className="btn btn-danger" onClick={konfirmasiHapus}>
-              Ya, hapus
+              Remove
             </button>
           </>
         }
       >
         {hapus && (
-          <p className="text-[13.5px] text-2 leading-relaxed">
-            <b>{hapus.email}</b> tidak akan bisa masuk lagi. Transaksi yang pernah
-            dia catat tetap tersimpan.
+          <p className="text-[13px] text-2 leading-relaxed">
+            <b>{hapus.email}</b> will no longer be able to sign in. Their past
+            transactions stay.
           </p>
         )}
       </Modal>
@@ -376,80 +340,66 @@ function FormPengguna({
   const toast = useToast();
   const [email, setEmail] = useState(awal?.email || "");
   const [nama, setNama] = useState(awal?.nama || "");
-  const [status, setStatus] = useState(
-    String(awal?.status || "aktif").toLowerCase()
-  );
+  const [status, setStatus] = useState(String(awal?.status || "aktif").toLowerCase());
   const [sedang, setSedang] = useState(false);
 
   async function simpan() {
-    if (!email.includes("@")) {
-      toast.gagal("Masukkan alamat email yang benar.");
-      return;
-    }
+    if (!email.includes("@")) return toast.gagal("Enter a valid email.");
     setSedang(true);
     try {
-      await api("users.save", {
-        user: { email, nama, peran: "admin", status },
-      });
-      toast.sukses("Pengguna disimpan.");
+      await api("users.save", { user: { email, nama, peran: "admin", status } });
+      toast.sukses("User saved.");
       onSelesai();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
       setSedang(false);
     }
   }
 
   return (
-    <div className="space-y-4">
-      <Field
-        label="Email Google"
-        hint="Harus alamat Gmail atau Google Workspace yang benar-benar dipakai."
-      >
+    <div className="space-y-3.5">
+      <Field label="Google email">
         <input
           className="input"
           type="email"
           value={email}
           autoFocus={!awal}
           disabled={!!awal}
-          placeholder="nama@gmail.com"
+          placeholder="name@gmail.com"
           onChange={(e) => setEmail(e.target.value)}
         />
       </Field>
 
-      <Field label="Nama">
+      <Field label="Name">
         <input
           className="input"
           value={nama}
-          placeholder="Contoh: Istri"
+          placeholder="Optional"
           onChange={(e) => setNama(e.target.value)}
         />
       </Field>
 
       <Field label="Status">
-        <select
-          className="select"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="aktif">Aktif</option>
-          <option value="nonaktif">Nonaktif</option>
+        <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="aktif">Active</option>
+          <option value="nonaktif">Inactive</option>
         </select>
       </Field>
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>
-          Batal
+          Cancel
         </button>
         <button className="btn btn-primary" onClick={simpan} disabled={sedang}>
-          {sedang ? "Menyimpan…" : "Simpan"}
+          {sedang ? "Saving…" : "Save"}
         </button>
       </div>
     </div>
   );
 }
 
-/* ================================ KATEGORI ================================ */
+/* ================================ CATEGORIES ============================== */
 
 function BagianKategori() {
   const toast = useToast();
@@ -469,11 +419,11 @@ function BagianKategori() {
     if (!hapus) return;
     try {
       await api("category.delete", { id: hapus.id });
-      toast.sukses("Kategori dihapus.");
+      toast.sukses("Category removed.");
       setHapus(null);
       picuBootstrap();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menghapus.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not remove.");
     }
   }
 
@@ -481,16 +431,14 @@ function BagianKategori() {
     <>
       <div className="grid lg:grid-cols-2 gap-4">
         <DaftarKategori
-          judul="Pemasukan"
-          keterangan="Sumber uang masuk"
+          judul="Income"
           items={masuk.filter((c) => c.sistem !== 1)}
           onTambah={() => setForm({ buka: true, awal: null, tipe: "Pemasukan" })}
           onUbah={(c) => setForm({ buka: true, awal: c, tipe: c.tipe })}
           onHapus={(c) => setHapus(c)}
         />
         <DaftarKategori
-          judul="Pengeluaran"
-          keterangan="Pos tempat uang keluar"
+          judul="Expense"
           items={keluar}
           onTambah={() => setForm({ buka: true, awal: null, tipe: "Pengeluaran" })}
           onUbah={(c) => setForm({ buka: true, awal: c, tipe: c.tipe })}
@@ -498,24 +446,11 @@ function BagianKategori() {
         />
       </div>
 
-      <div
-        className="rounded-2xl p-4 mt-4 text-[13px] leading-relaxed"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-      >
-        <p className="font-semibold mb-1">Saran soal jumlah kategori</p>
-        <p className="text-2 muted">
-          Jangan terlalu banyak. Kalau pilihannya menumpuk, kamu akan malas
-          memilih dan semua transaksi berakhir di <b>Lainnya</b> — laporannya jadi
-          tidak berguna. Sekitar 10 sampai 15 kategori pengeluaran sudah cukup
-          untuk kebanyakan orang.
-        </p>
-      </div>
-
       <Modal
         buka={form.buka}
         onTutup={() => setForm({ buka: false, awal: null, tipe: "Pengeluaran" })}
-        judul={form.awal ? "Ubah kategori" : "Tambah kategori"}
-        lebar={480}
+        judul={form.awal ? "Edit category" : "Add category"}
+        lebar={440}
       >
         <FormKategori
           awal={form.awal}
@@ -531,24 +466,23 @@ function BagianKategori() {
       <Modal
         buka={!!hapus}
         onTutup={() => setHapus(null)}
-        judul="Hapus kategori?"
-        lebar={430}
+        judul="Remove category?"
+        lebar={400}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setHapus(null)}>
-              Batal
+              Cancel
             </button>
             <button className="btn btn-danger" onClick={konfirmasiHapus}>
-              Ya, hapus
+              Remove
             </button>
           </>
         }
       >
         {hapus && (
-          <p className="text-[13.5px] text-2 leading-relaxed">
-            Kategori <b>{hapus.nama}</b> akan dihapus. Kalau sudah dipakai
-            transaksi, kategorinya hanya disembunyikan supaya riwayat lama tidak
-            rusak — transaksi lamamu tetap aman.
+          <p className="text-[13px] text-2 leading-relaxed">
+            <b>{hapus.nama}</b> will be removed. If it is already used, it is
+            only hidden so old transactions stay intact.
           </p>
         )}
       </Modal>
@@ -558,14 +492,12 @@ function BagianKategori() {
 
 function DaftarKategori({
   judul,
-  keterangan,
   items,
   onTambah,
   onUbah,
   onHapus,
 }: {
   judul: string;
-  keterangan: string;
   items: Category[];
   onTambah: () => void;
   onUbah: (c: Category) => void;
@@ -574,47 +506,44 @@ function DaftarKategori({
   return (
     <Card besar pad={false}>
       <div className="flex items-center justify-between p-5 pb-3">
-        <div>
-          <h2 className="text-[15px] font-semibold title">{judul}</h2>
-          <p className="text-[12.5px] muted mt-0.5">{keterangan}</p>
-        </div>
-        <button className="btn btn-ghost btn-icon btn-sm" onClick={onTambah} title="Tambah">
-          <Plus size={16} />
+        <h2 className="text-[14.5px] font-semibold title">{judul}</h2>
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onTambah} title="Add">
+          <Plus size={15} />
         </button>
       </div>
 
-      <div className="px-5 pb-5 space-y-2">
+      <div className="px-5 pb-5 space-y-1.5">
         {items.length === 0 ? (
-          <Kosong ikon={<Tags size={22} />} judul="Belum ada kategori" />
+          <Kosong ikon={<Tags size={20} />} judul="No categories" />
         ) : (
           items.map((c) => (
             <div
               key={c.id}
-              className="flex items-center gap-3 p-3 rounded-xl"
+              className="flex items-center gap-3 p-2.5 rounded-xl"
               style={{ background: "var(--surface-2)" }}
             >
               <span
-                className="w-3 h-3 rounded-full shrink-0"
+                className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ background: c.warna }}
               />
-              <span className="text-[13.5px] flex-1 truncate">{c.nama}</span>
-              {c.sistem === 1 && <span className="badge badge-netral">Sistem</span>}
-              <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[13px] flex-1 truncate">{c.nama}</span>
+              {c.sistem === 1 && <span className="badge badge-netral">System</span>}
+              <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   className="btn btn-ghost btn-icon btn-sm"
                   onClick={() => onUbah(c)}
-                  title="Ubah"
+                  title="Edit"
                 >
-                  <Pencil size={13} />
+                  <Pencil size={12} />
                 </button>
                 {c.sistem !== 1 && (
                   <button
                     className="btn btn-ghost btn-icon btn-sm"
                     style={{ color: "var(--danger)" }}
                     onClick={() => onHapus(c)}
-                    title="Hapus"
+                    title="Remove"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={12} />
                   </button>
                 )}
               </div>
@@ -639,89 +568,84 @@ function FormKategori({
 }) {
   const toast = useToast();
   const [nama, setNama] = useState(awal?.nama || "");
-  const [tipe, setTipe] = useState<"Pemasukan" | "Pengeluaran">(
-    awal?.tipe || tipeAwal
-  );
+  const [tipe, setTipe] = useState<"Pemasukan" | "Pengeluaran">(awal?.tipe || tipeAwal);
   const [warna, setWarna] = useState(awal?.warna || "#6366f1");
   const [sedang, setSedang] = useState(false);
 
   async function simpan() {
-    if (!nama.trim()) {
-      toast.gagal("Nama kategori wajib diisi.");
-      return;
-    }
+    if (!nama.trim()) return toast.gagal("Enter a category name.");
     setSedang(true);
     try {
       await api("category.save", {
         category: { id: awal?.id || idBaru(), nama, tipe, warna },
       });
-      toast.sukses("Kategori disimpan.");
+      toast.sukses("Category saved.");
       onSelesai();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
       setSedang(false);
     }
   }
 
   return (
-    <div className="space-y-4">
-      <Field label="Nama kategori">
+    <div className="space-y-3.5">
+      <Field label="Name">
         <input
           className="input"
           value={nama}
           autoFocus
-          placeholder="Contoh: Cicilan"
+          placeholder="e.g. Insurance"
           onChange={(e) => setNama(e.target.value)}
         />
       </Field>
 
       {!awal && (
-        <Field label="Jenis">
+        <Field label="Type">
           <select
             className="select"
             value={tipe}
             onChange={(e) => setTipe(e.target.value as "Pemasukan" | "Pengeluaran")}
           >
-            <option value="Pengeluaran">Pengeluaran</option>
-            <option value="Pemasukan">Pemasukan</option>
+            <option value="Pengeluaran">Expense</option>
+            <option value="Pemasukan">Income</option>
           </select>
         </Field>
       )}
 
-      <Field label="Warna">
-        <div className="flex flex-wrap gap-2">
+      <Field label="Color">
+        <div className="flex flex-wrap gap-1.5">
           {WARNA_PILIHAN.map((w) => (
             <button
               key={w}
               type="button"
               onClick={() => setWarna(w)}
-              className="w-8 h-8 rounded-[10px] transition"
+              className="w-7 h-7 rounded-[9px] transition"
               style={{
                 background: w,
                 outline: warna === w ? `2px solid ${w}` : "none",
                 outlineOffset: 2,
                 transform: warna === w ? "scale(1.08)" : "none",
               }}
-              aria-label={`Warna ${w}`}
+              aria-label={`Color ${w}`}
             />
           ))}
         </div>
       </Field>
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>
-          Batal
+          Cancel
         </button>
         <button className="btn btn-primary" onClick={simpan} disabled={sedang}>
-          {sedang ? "Menyimpan…" : "Simpan"}
+          {sedang ? "Saving…" : "Save"}
         </button>
       </div>
     </div>
   );
 }
 
-/* =============================== NOTIFIKASI =============================== */
+/* ================================== ALERTS ================================ */
 
 function BagianNotifikasi() {
   const toast = useToast();
@@ -736,10 +660,10 @@ function BagianNotifikasi() {
     setMenguji(true);
     try {
       const hasil = await api<{ sent: boolean }>("telegram.test");
-      if (hasil.sent) toast.sukses("Pesan uji terkirim. Cek Telegram-mu.");
-      else toast.gagal("Gagal mengirim. Periksa token dan chat ID.");
+      if (hasil.sent) toast.sukses("Test message sent.");
+      else toast.gagal("Could not send. Check the token and chat ID.");
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal mengirim pesan uji.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not send.");
     } finally {
       setMenguji(false);
     }
@@ -749,30 +673,24 @@ function BagianNotifikasi() {
     <div className="grid lg:grid-cols-2 gap-4">
       <Card besar>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[15px] font-semibold title">Notifikasi Telegram</h2>
+          <h2 className="text-[14.5px] font-semibold title">Telegram alerts</h2>
           {loading ? (
-            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-5 w-20" />
           ) : data?.configured ? (
             <span className="badge badge-aman">
-              <CheckCircle2 size={12} /> Tersambung
+              <CheckCircle2 size={11} /> Connected
             </span>
           ) : (
             <span className="badge badge-warning">
-              <TriangleAlert size={12} /> Belum diatur
+              <TriangleAlert size={11} /> Not set
             </span>
           )}
         </div>
 
-        <p className="text-[13.5px] text-2 leading-relaxed mb-4">
-          Aplikasi akan mengirim pesan otomatis ke Telegram setiap kali sebuah
-          pos budget naik tingkat peringatan. Tidak ada jadwal jam kirim — pesan
-          hanya muncul saat memang ada yang perlu kamu tahu.
-        </p>
-
         <div className="space-y-2 mb-4">
-          <Tingkat level="warning" isi="Mulai 70% dari batas" />
-          <Tingkat level="kritis" isi="Mulai 90% dari batas" />
-          <Tingkat level="over" isi="Melewati 100% dari batas" />
+          <Tingkat level="warning" isi="From 70% of the cap" />
+          <Tingkat level="kritis" isi="From 90% of the cap" />
+          <Tingkat level="over" isi="Past 100% of the cap" />
         </div>
 
         <div className="flex items-center gap-2">
@@ -781,63 +699,36 @@ function BagianNotifikasi() {
             onClick={uji}
             disabled={menguji || !data?.configured}
           >
-            <Send size={14} />
-            {menguji ? "Mengirim…" : "Kirim pesan uji"}
+            <Send size={13} />
+            {menguji ? "Sending…" : "Send test"}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={reload}>
-            Periksa ulang
+            Refresh
           </button>
         </div>
 
-        {data && !data.configured && (
-          <p className="text-[12.5px] muted mt-3 leading-relaxed">
-            Isi token bot dan chat ID lewat <b>Script Properties</b> di editor Apps
-            Script, lalu jalankan fungsi <b>setTelegram</b>. Langkah lengkapnya ada
-            di README.
-          </p>
+        {data?.bot && (
+          <p className="text-[11.5px] muted mt-3 font-mono">Bot {data.bot}</p>
         )}
       </Card>
 
       <Card besar>
-        <h2 className="text-[15px] font-semibold title mb-4">Cara memasang</h2>
-        <ol className="space-y-3.5 text-[13.5px] text-2">
+        <h2 className="text-[14.5px] font-semibold title mb-4">Setup</h2>
+        <ol className="space-y-3 text-[13px] text-2">
           <Langkah n={1}>
-            Buka Telegram, cari <b>@BotFather</b>, kirim <Kode>/newbot</Kode>, ikuti
-            perintahnya. Kamu akan mendapat <b>token bot</b>.
+            Create a bot with <Kode>@BotFather</Kode> and copy its token.
           </Langkah>
           <Langkah n={2}>
-            Buat channel atau grup, lalu <b>tambahkan bot</b> sebagai anggota dan
-            jadikan <b>admin</b>. Tanpa ini, bot tidak bisa mengirim pesan.
+            Add the bot to your channel and make it an <b>admin</b>.
           </Langkah>
           <Langkah n={3}>
-            Salin <b>chat ID</b> channel (biasanya diawali <Kode>-100</Kode>).
-            Bisa dilihat lewat <Kode>getUpdates</Kode> pada bot.
+            Copy the channel chat ID (usually starts with <Kode>-100</Kode>).
           </Langkah>
           <Langkah n={4}>
-            Di editor Apps Script, buka <b>Project Settings → Script properties</b>,
-            tambahkan <Kode>TELEGRAM_BOT_TOKEN</Kode> dan{" "}
-            <Kode>TELEGRAM_CHAT_ID</Kode>. Jangan ditulis di dalam kode.
-          </Langkah>
-          <Langkah n={5}>
-            Kembali ke halaman ini, klik <b>Kirim pesan uji</b>.
+            In Apps Script, open <b>Project Settings → Script properties</b> and
+            add <Kode>TELEGRAM_BOT_TOKEN</Kode> and <Kode>TELEGRAM_CHAT_ID</Kode>.
           </Langkah>
         </ol>
-
-        {data?.bot && (
-          <div
-            className="rounded-xl p-3 mt-4 text-[12.5px]"
-            style={{ background: "var(--surface-2)" }}
-          >
-            <p className="muted">Bot terdeteksi</p>
-            <p className="font-mono">{data.bot}</p>
-            {data.chatId && (
-              <>
-                <p className="muted mt-2">Chat ID</p>
-                <p className="font-mono">{data.chatId}</p>
-              </>
-            )}
-          </div>
-        )}
       </Card>
     </div>
   );
@@ -851,22 +742,19 @@ function Tingkat({ level, isi }: { level: string; isi: string }) {
         ? "var(--kritis)"
         : "var(--danger)";
   return (
-    <div className="flex items-center gap-3">
-      <span
-        className="w-2.5 h-2.5 rounded-full shrink-0"
-        style={{ background: warna }}
-      />
-      <span className="text-[13px] font-medium capitalize w-[64px]">{level}</span>
-      <span className="text-[12.5px] muted">{isi}</span>
+    <div className="flex items-center gap-2.5">
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: warna }} />
+      <span className="text-[12.5px] font-medium capitalize w-[58px]">{level}</span>
+      <span className="text-[12px] muted">{isi}</span>
     </div>
   );
 }
 
 function Langkah({ n, children }: { n: number; children: React.ReactNode }) {
   return (
-    <li className="flex gap-3">
+    <li className="flex gap-2.5">
       <span
-        className="grid place-items-center w-6 h-6 rounded-lg text-[12px] font-semibold shrink-0"
+        className="grid place-items-center w-5 h-5 rounded-md text-[11px] font-semibold shrink-0"
         style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
       >
         {n}
@@ -879,7 +767,7 @@ function Langkah({ n, children }: { n: number; children: React.ReactNode }) {
 function Kode({ children }: { children: React.ReactNode }) {
   return (
     <code
-      className="px-1.5 py-0.5 rounded-md text-[11.5px] font-mono"
+      className="px-1 py-0.5 rounded-md text-[11px] font-mono"
       style={{ background: "var(--surface-3)" }}
     >
       {children}
@@ -887,106 +775,7 @@ function Kode({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ================================ TAMPILAN ================================ */
-
-function BagianTampilan() {
-  const [tema, setTema] = useState<"light" | "dark">(() =>
-    typeof window === "undefined" ? "light" : ambilTema()
-  );
-
-  function pilih(t: "light" | "dark") {
-    setTema(t);
-    simpanTema(t);
-  }
-
-  return (
-    <Card besar>
-      <h2 className="text-[15px] font-semibold title mb-1">Tema</h2>
-      <p className="text-[12.5px] muted mb-5">
-        Pilihanmu disimpan di perangkat ini.
-      </p>
-
-      <div className="grid sm:grid-cols-2 gap-4 max-w-[560px]">
-        <PilihanTema
-          aktif={tema === "light"}
-          onClick={() => pilih("light")}
-          judul="Terang"
-          Ikon={Sun}
-          latar="#f4f5f7"
-          kartu="#ffffff"
-        />
-        <PilihanTema
-          aktif={tema === "dark"}
-          onClick={() => pilih("dark")}
-          judul="Gelap"
-          Ikon={Moon}
-          latar="#080b13"
-          kartu="#111624"
-        />
-      </div>
-    </Card>
-  );
-}
-
-function PilihanTema({
-  aktif,
-  onClick,
-  judul,
-  Ikon,
-  latar,
-  kartu,
-}: {
-  aktif: boolean;
-  onClick: () => void;
-  judul: string;
-  Ikon: React.ComponentType<{ size?: number }>;
-  latar: string;
-  kartu: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-2xl p-3 transition"
-      style={{
-        border: `2px solid ${aktif ? "var(--accent)" : "var(--border)"}`,
-        background: "var(--surface-2)",
-      }}
-    >
-      <div
-        className="rounded-xl p-3 h-[104px] mb-3 relative overflow-hidden"
-        style={{ background: latar }}
-      >
-        <div className="rounded-lg p-2.5" style={{ background: kartu }}>
-          <div
-            className="h-2 rounded-full mb-2 w-[60%]"
-            style={{ background: "var(--accent)", opacity: 0.8 }}
-          />
-          <div
-            className="h-1.5 rounded-full mb-1.5 w-full"
-            style={{ background: "var(--border)" }}
-          />
-          <div
-            className="h-1.5 rounded-full w-[75%]"
-            style={{ background: "var(--border)" }}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Ikon size={15} />
-        <span className="text-[13.5px] font-medium">{judul}</span>
-        {aktif && (
-          <CheckCircle2
-            size={15}
-            className="ml-auto"
-            style={{ color: "var(--accent)" }}
-          />
-        )}
-      </div>
-    </button>
-  );
-}
-
-/* ================================== DATA ================================== */
+/* =================================== DATA ================================= */
 
 function BagianData() {
   const { user, bootstrap } = useAuth();
@@ -994,62 +783,48 @@ function BagianData() {
   return (
     <div className="grid lg:grid-cols-2 gap-4">
       <Card besar>
-        <h2 className="text-[15px] font-semibold title mb-4">Database</h2>
-        <p className="text-[13.5px] text-2 leading-relaxed mb-4">
-          Semua catatanmu disimpan di Google Sheets milikmu sendiri. Tidak ada
-          data yang dikirim ke tempat lain selain Google dan server aplikasi ini.
+        <h2 className="text-[14.5px] font-semibold title mb-4">Database</h2>
+        <div className="space-y-1 text-[13px]">
+          <Baris label="Users" nilai="Users" />
+          <Baris label="Wallets" nilai="Dompet" />
+          <Baris label="Categories" nilai="Kategori" />
+          <Baris label="Transactions" nilai="Transaksi" />
+          <Baris label="Budgets" nilai="Budget" />
+          <Baris label="Alerts sent" nilai="Notifikasi" />
+        </div>
+        <p className="text-[11.5px] muted mt-4 leading-relaxed">
+          Do not insert or delete rows by hand in the spreadsheet. It makes the
+          app read the wrong rows.
         </p>
-
-        <div className="space-y-2 text-[13px]">
-          <Baris label="Sheet pengguna" nilai="Users" />
-          <Baris label="Sheet dompet" nilai="Dompet" />
-          <Baris label="Sheet kategori" nilai="Kategori" />
-          <Baris label="Sheet transaksi" nilai="Transaksi" />
-          <Baris label="Sheet budget" nilai="Budget" />
-          <Baris label="Sheet notifikasi" nilai="Notifikasi" />
-        </div>
-
-        <div
-          className="rounded-xl p-3.5 mt-4 text-[12.5px] text-2 leading-relaxed"
-          style={{ background: "var(--surface-2)" }}
-        >
-          <p className="font-semibold mb-1">Jangan mengubah isi sheet manual</p>
-          <p className="muted">
-            Menyisipkan atau menghapus baris langsung di spreadsheet bisa membuat
-            aplikasi salah membaca data. Kalau perlu memperbaiki catatan, gunakan
-            tombol Ubah di halaman Transaksi.
-          </p>
-        </div>
       </Card>
 
       <Card besar>
-        <h2 className="text-[15px] font-semibold title mb-4">Cadangan & ekspor</h2>
-
-        <p className="text-[13.5px] text-2 leading-relaxed mb-4">
-          Kamu bisa mengunduh seluruh transaksi ke Excel kapan saja lewat halaman
-          Laporan. Datamu tidak terkunci di aplikasi ini.
+        <h2 className="text-[14.5px] font-semibold title mb-4">Backup</h2>
+        <p className="text-[13px] text-2 mb-4">
+          Download every transaction as CSV from Reports.
         </p>
-
         <a href="/laporan" className="btn btn-ghost btn-sm mb-5">
-          <ExternalLink size={14} /> Buka halaman Laporan
+          <ExternalLink size={13} /> Open Reports
         </a>
 
-        <div className="divider mb-5" />
+        <div className="divider mb-4" />
 
-        <h3 className="text-[13.5px] font-semibold mb-3">Akun yang terhubung</h3>
-        <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "var(--surface-2)" }}>
-          <Avatar nama={user?.nama || user?.email || "?"} size={38} />
+        <div
+          className="flex items-center gap-3 p-2.5 rounded-xl"
+          style={{ background: "var(--surface-2)" }}
+        >
+          <Avatar nama={user?.nama || user?.email || "?"} size={34} />
           <div className="min-w-0">
-            <p className="text-[13.5px] font-medium truncate">
-              {user?.nama || "Tanpa nama"}
+            <p className="text-[13px] font-medium truncate">
+              {user?.nama || "No name"}
             </p>
-            <p className="text-[11.5px] muted truncate">{user?.email}</p>
+            <p className="text-[11px] muted truncate">{user?.email}</p>
           </div>
         </div>
 
         {bootstrap && (
-          <p className="text-[12px] muted mt-4">
-            Bulan berjalan menurut server: {labelTanggal(bootstrap.today)}
+          <p className="text-[11.5px] muted mt-4">
+            Server date: {labelTanggal(bootstrap.today)}
           </p>
         )}
       </Card>
@@ -1059,9 +834,9 @@ function BagianData() {
 
 function Baris({ label, nilai }: { label: string; nilai: string }) {
   return (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-1.5">
       <span className="muted">{label}</span>
-      <span className="font-mono text-[12.5px]">{nilai}</span>
+      <span className="font-mono text-[12px]">{nilai}</span>
     </div>
   );
 }

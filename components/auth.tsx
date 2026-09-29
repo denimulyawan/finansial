@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { LogIn, ShieldAlert, WifiOff } from "lucide-react";
+import { ShieldAlert, TriangleAlert } from "lucide-react";
 import {
   ApiError,
   GOOGLE_CLIENT_ID,
@@ -51,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPesanMasuk(null);
   }, []);
 
-  /* ---- cek sesi tersimpan saat halaman dibuka ---- */
   useEffect(() => {
     let hidup = true;
     (async () => {
@@ -68,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const err = e as ApiError;
           setPesanMasuk(
             err.code === "UNAUTHORIZED"
-              ? "Sesi sebelumnya sudah berakhir. Silakan masuk lagi."
+              ? "Your session expired. Please sign in again."
               : err.message
           );
         }
@@ -88,14 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await muatUlang();
       } catch (e) {
         hapusSesi();
-        const err = e as ApiError;
-        throw err;
+        throw e as ApiError;
       }
     },
     [muatUlang]
   );
 
-  /* segarkan data dasar saat dompet/kategori berubah */
   useEffect(() => {
     const h = () => {
       muatUlang().catch(() => {});
@@ -112,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       g?.accounts?.id?.disableAutoSelect?.();
     } catch {
-      /* abaikan */
+      /* ignore */
     }
   }, []);
 
@@ -125,11 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthCtx {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useAuth harus dipakai di dalam AuthProvider");
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
 
-/* ============================== GERBANG MASUK ============================= */
+/* ================================== GATE ================================== */
 
 export function Gerbang({ children }: { children: ReactNode }) {
   const { siap, user } = useAuth();
@@ -142,9 +139,9 @@ export function Gerbang({ children }: { children: ReactNode }) {
 function MemuatAwal() {
   return (
     <div className="min-h-screen grid place-items-center px-4">
-      <div className="flex flex-col items-center gap-4 anim-in">
-        <div className="spinner" style={{ width: 26, height: 26, color: "var(--accent)" }} />
-        <p className="text-sm muted">Menyiapkan aplikasi…</p>
+      <div className="flex flex-col items-center gap-3.5 anim-in">
+        <div className="spinner" style={{ width: 24, height: 24, color: "var(--accent)" }} />
+        <p className="text-[13px] muted">Loading…</p>
       </div>
     </div>
   );
@@ -155,11 +152,6 @@ export function HalamanMasuk() {
   const tombolRef = useRef<HTMLDivElement>(null);
   const [galat, setGalat] = useState<string | null>(null);
   const [sedang, setSedang] = useState(false);
-
-  const temaSekarang = useCallback((): "outline" | "filled_black" => {
-    if (typeof document === "undefined") return "outline";
-    return document.documentElement.classList.contains("dark") ? "filled_black" : "outline";
-  }, []);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes("XXXX")) return;
@@ -174,13 +166,12 @@ export function HalamanMasuk() {
               id?: {
                 initialize: (o: Record<string, unknown>) => void;
                 renderButton: (el: HTMLElement, o: Record<string, unknown>) => void;
-                prompt: () => void;
               };
             };
           };
         }).google;
 
-        if (!g?.accounts?.id) throw new Error("Layanan masuk Google tidak tersedia.");
+        if (!g?.accounts?.id) throw new Error("Google sign-in is unavailable.");
 
         g.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
@@ -203,12 +194,12 @@ export function HalamanMasuk() {
         tombolRef.current.innerHTML = "";
         g.accounts.id.renderButton(tombolRef.current, {
           type: "standard",
-          theme: temaSekarang(),
+          theme: "outline",
           size: "large",
           shape: "pill",
           text: "signin_with",
           logo_alignment: "left",
-          locale: "id",
+          locale: "en",
           width: 300,
         });
       })
@@ -219,80 +210,52 @@ export function HalamanMasuk() {
     return () => {
       batal = true;
     };
-  }, [masuk, temaSekarang]);
+  }, [masuk]);
 
-  const konfigurasiKurang = !adaKonfigurasi();
+  const kurangKonfigurasi = !adaKonfigurasi();
+  const pesan = galat || pesanMasuk;
 
   return (
     <div className="min-h-screen grid place-items-center px-4 py-10">
-      <div className="w-full max-w-[420px] anim-up">
-        <div className="flex flex-col items-center mb-7">
-          <Merek size={52} />
-          <h1 className="title text-[26px] mt-4">Finansial</h1>
-          <p className="text-sm muted mt-1 text-center">
-            Catatan keuangan rumah tangga
-          </p>
+      <div className="w-full max-w-[380px] anim-up">
+        <div className="flex flex-col items-center mb-6">
+          <Merek size={48} />
+          <h1 className="title text-[23px] mt-3.5">Finansial</h1>
         </div>
 
         <div className="card card-lg card-pad">
-          {konfigurasiKurang ? (
-            <Peringatan
-              ikon={<ShieldAlert size={18} />}
-              judul="Backend belum disambungkan"
-              isi={
-                <>
-                  Isi <Kode>NEXT_PUBLIC_GAS_URL</Kode> dan{" "}
-                  <Kode>NEXT_PUBLIC_GOOGLE_CLIENT_ID</Kode> di file{" "}
-                  <Kode>.env.local</Kode>, lalu jalankan ulang aplikasi. Lihat
-                  README untuk langkah lengkapnya.
-                </>
-              }
-            />
+          {kurangKonfigurasi ? (
+            <Peringatan ikon={<ShieldAlert size={17} />} judul="Backend not connected">
+              Set <Kode>NEXT_PUBLIC_GAS_URL</Kode> and{" "}
+              <Kode>NEXT_PUBLIC_GOOGLE_CLIENT_ID</Kode> in <Kode>.env.local</Kode>,
+              then restart.
+            </Peringatan>
           ) : (
             <>
-              <h2 className="text-[15px] font-semibold mb-1">Masuk</h2>
-              <p className="text-[13px] muted mb-5">
-                Gunakan akun Google yang sudah didaftarkan admin. Tidak perlu
-                membuat kata sandi.
+              <h2 className="text-[14.5px] font-semibold mb-1">Sign in</h2>
+              <p className="text-[12.5px] muted mb-5">
+                Use a Google account registered by the admin.
               </p>
 
-              {(galat || pesanMasuk) && (
+              {pesan && (
                 <div className="mb-4">
-                  <Peringatan
-                    ikon={<WifiOff size={18} />}
-                    judul="Tidak bisa masuk"
-                    isi={galat || pesanMasuk || ""}
-                  />
+                  <Peringatan ikon={<TriangleAlert size={17} />} judul={pesan} />
                 </div>
               )}
 
-              <div className="flex justify-center min-h-[46px]">
+              <div className="flex justify-center min-h-[44px]">
                 {sedang ? (
-                  <div className="flex items-center gap-3 py-3 text-sm muted">
+                  <div className="flex items-center gap-2.5 py-3 text-[13px] muted">
                     <span className="spinner" style={{ color: "var(--accent)" }} />
-                    Memeriksa akun…
+                    Checking account…
                   </div>
                 ) : (
                   <div ref={tombolRef} />
                 )}
               </div>
-
-              <div className="divider my-5" />
-
-              <div className="flex items-start gap-2.5 text-[12.5px] muted leading-relaxed">
-                <LogIn size={15} className="mt-0.5 shrink-0" />
-                <p>
-                  Email yang belum terdaftar tidak akan bisa masuk. Minta admin
-                  menambahkannya lewat menu <b>Pengaturan → Pengguna</b>.
-                </p>
-              </div>
             </>
           )}
         </div>
-
-        <p className="text-[12px] muted text-center mt-6">
-          Data tersimpan di Google Sheets milikmu sendiri.
-        </p>
       </div>
     </div>
   );
@@ -301,26 +264,26 @@ export function HalamanMasuk() {
 function Peringatan({
   ikon,
   judul,
-  isi,
+  children,
 }: {
   ikon: ReactNode;
   judul: string;
-  isi: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <div
-      className="flex items-start gap-3 rounded-xl p-3.5"
+      className="flex items-start gap-2.5 rounded-xl p-3"
       style={{
-        background: "color-mix(in srgb, var(--warning) 9%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--warning) 24%, transparent)",
+        background: "color-mix(in srgb, var(--warning) 8%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--warning) 22%, transparent)",
       }}
     >
       <span className="shrink-0 mt-0.5" style={{ color: "var(--warning)" }}>
         {ikon}
       </span>
-      <div className="text-[13px] leading-relaxed">
-        <p className="font-semibold mb-0.5">{judul}</p>
-        <p className="text-2">{isi}</p>
+      <div className="text-[12.5px] leading-relaxed min-w-0">
+        <p className="font-semibold">{judul}</p>
+        {children && <p className="text-2 mt-0.5">{children}</p>}
       </div>
     </div>
   );
@@ -329,7 +292,7 @@ function Peringatan({
 function Kode({ children }: { children: ReactNode }) {
   return (
     <code
-      className="px-1.5 py-0.5 rounded-md text-[11.5px] font-mono"
+      className="px-1 py-0.5 rounded-md text-[11px] font-mono"
       style={{ background: "var(--surface-3)" }}
     >
       {children}
@@ -337,17 +300,16 @@ function Kode({ children }: { children: ReactNode }) {
   );
 }
 
-/* ================================= MEREK ================================= */
+/* ================================== BRAND ================================= */
 
-export function Merek({ size = 36 }: { size?: number }) {
+export function Merek({ size = 34 }: { size?: number }) {
   return (
     <div
-      className="grid place-items-center rounded-[13px] font-bold text-white shrink-0"
+      className="grid place-items-center rounded-[12px] font-bold text-white shrink-0"
       style={{
         width: size,
         height: size,
-        background: "linear-gradient(140deg, var(--accent-2), var(--accent))",
-        boxShadow: "0 10px 24px -12px color-mix(in srgb, var(--accent) 85%, transparent)",
+        background: "var(--accent)",
         fontSize: size * 0.46,
         letterSpacing: "-0.04em",
       }}
@@ -357,21 +319,15 @@ export function Merek({ size = 36 }: { size?: number }) {
   );
 }
 
-export function Avatar({
-  nama,
-  size = 34,
-}: {
-  nama: string;
-  size?: number;
-}) {
+export function Avatar({ nama, size = 34 }: { nama: string; size?: number }) {
   return (
     <div
       className="grid place-items-center rounded-full font-semibold shrink-0"
       style={{
         width: size,
         height: size,
-        background: "var(--accent-soft)",
-        color: "var(--accent)",
+        background: "var(--surface-3)",
+        color: "var(--text-2)",
         fontSize: size * 0.38,
       }}
     >

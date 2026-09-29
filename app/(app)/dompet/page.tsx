@@ -17,75 +17,82 @@ import {
 import { ApiError, api, idBaru } from "@/lib/api";
 import { picuBootstrap, useApi } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
-import { Field, Galat, Kosong, Modal, PageHeader, RupiahInput, Skeleton } from "@/components/ui";
+import {
+  Field,
+  Galat,
+  Kosong,
+  Modal,
+  PageHeader,
+  RupiahInput,
+  Skeleton,
+} from "@/components/ui";
 import { JENIS_DOMPET_LABEL, rp } from "@/lib/format";
 import type { JenisDompet, Wallet } from "@/lib/types";
 
-type WalletDenganSaldo = Wallet & { saldo: number; jmlTransaksi: number };
+type WalletSaldo = Wallet & { saldo: number; jmlTransaksi: number };
 
-const JENIS: { v: JenisDompet; l: string; Ikon: React.ComponentType<{ size?: number }> }[] = [
-  { v: "tunai", l: "Tunai", Ikon: Banknote },
-  { v: "bank", l: "Rekening Bank", Ikon: Landmark },
+const JENIS: {
+  v: JenisDompet;
+  l: string;
+  Ikon: React.ComponentType<{ size?: number }>;
+}[] = [
+  { v: "tunai", l: "Cash", Ikon: Banknote },
+  { v: "bank", l: "Bank account", Ikon: Landmark },
   { v: "ewallet", l: "E-Wallet", Ikon: Smartphone },
-  { v: "investasi", l: "Investasi", Ikon: PiggyBank },
-  { v: "piutang", l: "Piutang (orang berhutang ke saya)", Ikon: HandCoins },
-  { v: "hutang", l: "Hutang (saya berhutang)", Ikon: CreditCard },
-  { v: "lainnya", l: "Lainnya", Ikon: WalletIcon },
+  { v: "investasi", l: "Investment", Ikon: PiggyBank },
+  { v: "piutang", l: "Receivable (owed to me)", Ikon: HandCoins },
+  { v: "hutang", l: "Payable (I owe)", Ikon: CreditCard },
+  { v: "lainnya", l: "Other", Ikon: WalletIcon },
 ];
 
-function ikonJenis(jenis: string, size = 17) {
+function ikonJenis(jenis: string, size = 16) {
   const Ikon = JENIS.find((j) => j.v === jenis)?.Ikon || WalletIcon;
   return <Ikon size={size} />;
 }
 
 export default function HalamanDompet() {
   const toast = useToast();
-  const { data, loading, error, reload } = useApi<{ wallets: WalletDenganSaldo[] }>(
+  const { data, loading, error, reload } = useApi<{ wallets: WalletSaldo[] }>(
     "wallet.list"
   );
 
-  const [form, setForm] = useState<{ buka: boolean; awal: WalletDenganSaldo | null }>({
+  const [form, setForm] = useState<{ buka: boolean; awal: WalletSaldo | null }>({
     buka: false,
     awal: null,
   });
-  const [arsip, setArsip] = useState<WalletDenganSaldo | null>(null);
+  const [arsip, setArsip] = useState<WalletSaldo | null>(null);
 
   const wallets = data?.wallets || [];
   const aktif = wallets.filter((w) => w.aktif === 1);
   const nonaktif = wallets.filter((w) => w.aktif !== 1);
   const totalSaldo = aktif.reduce((a, w) => a + w.saldo, 0);
 
-  async function arsipkan(w: WalletDenganSaldo, paksa: boolean) {
+  async function arsipkan(w: WalletSaldo, paksa: boolean) {
     try {
       await api("wallet.archive", { id: w.id, aktif: w.aktif === 1 ? 0 : 1, paksa });
-      toast.sukses(w.aktif === 1 ? "Dompet diarsipkan." : "Dompet diaktifkan lagi.");
+      toast.sukses(w.aktif === 1 ? "Wallet archived." : "Wallet restored.");
       setArsip(null);
       picuBootstrap();
     } catch (e) {
-      if (e instanceof ApiError && !paksa && e.message.includes("Saldo")) {
+      if (e instanceof ApiError && !paksa && e.message.includes("still holds")) {
         setArsip(w);
-        toast.gagal(e.message + " Klik arsipkan paksa kalau tetap ingin diarsipkan.");
         return;
       }
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal mengubah dompet.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not update wallet.");
     }
   }
 
   return (
     <>
       <PageHeader
-        judul="Dompet"
-        sub={
-          aktif.length
-            ? `${aktif.length} dompet aktif · total ${rp(totalSaldo)}`
-            : "Kelola tempat uangmu disimpan"
-        }
+        judul="Wallets"
+        sub={aktif.length ? `${aktif.length} active · ${rp(totalSaldo)}` : undefined}
         aksi={
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setForm({ buka: true, awal: null })}
           >
-            <Plus size={16} strokeWidth={2.6} /> Tambah dompet
+            <Plus size={15} strokeWidth={2.6} /> Add wallet
           </button>
         }
       />
@@ -96,41 +103,24 @@ export default function HalamanDompet() {
         </div>
       )}
 
-      <div
-        className="rounded-2xl p-4 mb-5 text-[13px] leading-relaxed"
-        style={{
-          background: "var(--accent-soft)",
-          border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
-        }}
-      >
-        <p className="font-semibold mb-0.5" style={{ color: "var(--accent)" }}>
-          Soal saldo awal
-        </p>
-        <p className="text-2">
-          Saldo awal adalah isi dompet ini <b>saat kamu mulai mencatat</b>. Isi
-          sekali saja dengan kondisi sebenarnya, lalu jangan diubah lagi — semua
-          transaksi setelahnya menghitung dari angka ini.
-        </p>
-      </div>
-
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+            <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
       ) : aktif.length === 0 ? (
         <div className="card card-lg">
           <Kosong
-            ikon={<WalletIcon size={24} />}
-            judul="Belum ada dompet aktif"
-            isi="Tambahkan dompet pertamamu — misalnya Tunai, lalu isi saldo awalnya."
+            ikon={<WalletIcon size={22} />}
+            judul="No wallets yet"
+            isi="Add your first wallet and set its starting balance."
             aksi={
               <button
                 className="btn btn-primary btn-sm"
                 onClick={() => setForm({ buka: true, awal: null })}
               >
-                <Plus size={16} /> Tambah dompet
+                <Plus size={15} /> Add wallet
               </button>
             }
           />
@@ -140,51 +130,46 @@ export default function HalamanDompet() {
           {aktif.map((w) => (
             <div key={w.id} className="card card-lg card-pad anim-up">
               <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <span
-                    className="grid place-items-center w-10 h-10 rounded-xl shrink-0"
-                    style={{
-                      background: "var(--accent-soft)",
-                      color: "var(--accent)",
-                    }}
+                    className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0"
+                    style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
                   >
                     {ikonJenis(w.jenis)}
                   </span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-[14.5px] truncate title">
-                      {w.nama}
-                    </p>
-                    <p className="text-[11.5px] muted">
+                    <p className="font-semibold text-[14px] truncate title">{w.nama}</p>
+                    <p className="text-[11px] muted">
                       {JENIS_DOMPET_LABEL[w.jenis] || w.jenis}
                     </p>
                   </div>
                 </div>
                 <button
                   className="btn btn-ghost btn-icon btn-sm shrink-0"
-                  title="Ubah dompet"
+                  title="Edit"
                   onClick={() => setForm({ buka: true, awal: w })}
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                 </button>
               </div>
 
               <p
-                className="num text-[21px] font-semibold title leading-none"
+                className="num text-[20px] font-semibold title leading-none"
                 style={{ color: w.saldo < 0 ? "var(--danger)" : undefined }}
               >
                 {rp(w.saldo)}
               </p>
 
-              <div className="flex items-center justify-between mt-3.5">
-                <span className="text-[11.5px] muted">
-                  Saldo awal {rp(w.saldo_awal)} · {w.jmlTransaksi} transaksi
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-[11px] muted">
+                  Start {rp(w.saldo_awal)} · {w.jmlTransaksi}
                 </span>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => arsipkan(w, false)}
-                  title="Arsipkan dompet"
+                  title="Archive"
                 >
-                  <Archive size={13} /> Arsip
+                  <Archive size={12} /> Archive
                 </button>
               </div>
             </div>
@@ -194,31 +179,26 @@ export default function HalamanDompet() {
 
       {nonaktif.length > 0 && (
         <>
-          <h2 className="title text-[15px] mt-8 mb-3">
-            Diarsipkan ({nonaktif.length})
-          </h2>
+          <h2 className="title text-[14px] mt-7 mb-3">Archived ({nonaktif.length})</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {nonaktif.map((w) => (
-              <div
-                key={w.id}
-                className="card card-pad opacity-70 flex items-center gap-3"
-              >
+              <div key={w.id} className="card card-pad opacity-65 flex items-center gap-3">
                 <span
-                  className="grid place-items-center w-9 h-9 rounded-xl shrink-0"
+                  className="grid place-items-center w-8 h-8 rounded-[10px] shrink-0"
                   style={{ background: "var(--surface-3)", color: "var(--muted)" }}
                 >
-                  {ikonJenis(w.jenis, 15)}
+                  {ikonJenis(w.jenis, 14)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13.5px] font-medium truncate">{w.nama}</p>
-                  <p className="text-[11.5px] muted">{rp(w.saldo)}</p>
+                  <p className="text-[13px] font-medium truncate">{w.nama}</p>
+                  <p className="text-[11px] muted">{rp(w.saldo)}</p>
                 </div>
                 <button
                   className="btn btn-ghost btn-icon btn-sm shrink-0"
-                  title="Aktifkan lagi"
+                  title="Restore"
                   onClick={() => arsipkan(w, true)}
                 >
-                  <ArchiveRestore size={15} />
+                  <ArchiveRestore size={14} />
                 </button>
               </div>
             ))}
@@ -229,8 +209,8 @@ export default function HalamanDompet() {
       <Modal
         buka={form.buka}
         onTutup={() => setForm({ buka: false, awal: null })}
-        judul={form.awal ? "Ubah dompet" : "Tambah dompet"}
-        lebar={520}
+        judul={form.awal ? "Edit wallet" : "Add wallet"}
+        lebar={480}
       >
         <FormDompet
           awal={form.awal}
@@ -245,27 +225,23 @@ export default function HalamanDompet() {
       <Modal
         buka={!!arsip && arsip.aktif === 1 && Math.abs(arsip.saldo) > 0.5}
         onTutup={() => setArsip(null)}
-        judul="Saldo dompet belum kosong"
-        lebar={430}
+        judul="Wallet still has a balance"
+        lebar={410}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setArsip(null)}>
-              Batal
+              Cancel
             </button>
-            <button
-              className="btn btn-danger"
-              onClick={() => arsip && arsipkan(arsip, true)}
-            >
-              Arsipkan paksa
+            <button className="btn btn-danger" onClick={() => arsip && arsipkan(arsip, true)}>
+              Archive anyway
             </button>
           </>
         }
       >
         {arsip && (
-          <p className="text-[13.5px] text-2 leading-relaxed">
-            Dompet <b>{arsip.nama}</b> masih bersaldo <b>{rp(arsip.saldo)}</b>.
-            Sebaiknya transfer dulu isinya ke dompet lain supaya catatanmu tetap
-            akurat.
+          <p className="text-[13px] text-2 leading-relaxed">
+            <b>{arsip.nama}</b> still holds <b>{rp(arsip.saldo)}</b>. Transfer it
+            out first to keep your records accurate.
           </p>
         )}
       </Modal>
@@ -273,14 +249,14 @@ export default function HalamanDompet() {
   );
 }
 
-/* ============================== FORM DOMPET =============================== */
+/* ============================== WALLET FORM =============================== */
 
 function FormDompet({
   awal,
   onSelesai,
   onBatal,
 }: {
-  awal: WalletDenganSaldo | null;
+  awal: WalletSaldo | null;
   onSelesai: () => void;
   onBatal: () => void;
 }) {
@@ -294,14 +270,7 @@ function FormDompet({
   const adaTransaksi = (awal?.jmlTransaksi || 0) > 0;
 
   async function simpan() {
-    if (!nama.trim()) {
-      toast.gagal("Nama dompet wajib diisi.");
-      return;
-    }
-    if (adaTransaksi && jenis === "piutang" && awal?.jenis !== "piutang") {
-      toast.gagal("Jenis dompet tidak bisa diubah karena sudah ada transaksi.");
-      return;
-    }
+    if (!nama.trim()) return toast.gagal("Enter a wallet name.");
 
     setSedang(true);
     try {
@@ -314,28 +283,28 @@ function FormDompet({
           catatan,
         },
       });
-      toast.sukses(awal ? "Dompet diperbarui." : "Dompet ditambahkan.");
+      toast.sukses(awal ? "Wallet updated." : "Wallet added.");
       onSelesai();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan dompet.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save wallet.");
     } finally {
       setSedang(false);
     }
   }
 
   return (
-    <div className="space-y-4">
-      <Field label="Nama dompet">
+    <div className="space-y-3.5">
+      <Field label="Name">
         <input
           className="input"
           value={nama}
           autoFocus
-          placeholder="Contoh: Tunai, BCA, OVO"
+          placeholder="Cash, BCA, OVO…"
           onChange={(e) => setNama(e.target.value)}
         />
       </Field>
 
-      <Field label="Jenis">
+      <Field label="Type">
         <select
           className="select"
           value={jenis}
@@ -350,31 +319,31 @@ function FormDompet({
       </Field>
 
       <Field
-        label="Saldo awal"
+        label="Starting balance"
         hint={
           adaTransaksi
-            ? "Dompet ini sudah punya transaksi. Mengubah saldo awal akan menggeser semua saldo dan laporan."
-            : "Isi dengan jumlah uang yang ada di dompet ini sekarang."
+            ? "Changing this shifts every balance and report."
+            : "The amount in this wallet right now."
         }
       >
         <RupiahInput value={saldoAwal} onChange={setSaldoAwal} />
       </Field>
 
-      <Field label="Catatan" hint="Opsional.">
+      <Field label="Note">
         <input
           className="input"
           value={catatan}
-          placeholder="Contoh: rekening gaji"
+          placeholder="Optional"
           onChange={(e) => setCatatan(e.target.value)}
         />
       </Field>
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>
-          Batal
+          Cancel
         </button>
         <button className="btn btn-primary" onClick={simpan} disabled={sedang}>
-          {sedang ? "Menyimpan…" : awal ? "Simpan perubahan" : "Tambah dompet"}
+          {sedang ? "Saving…" : awal ? "Save changes" : "Add wallet"}
         </button>
       </div>
     </div>

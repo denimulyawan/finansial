@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import {
-  ArrowLeftRight,
   ArrowDownLeft,
+  ArrowLeftRight,
   ArrowUpRight,
   Loader2,
   Save,
@@ -12,8 +12,14 @@ import { ApiError, api, idBaru } from "@/lib/api";
 import { picuMuatUlang } from "@/lib/hooks";
 import { Field, RupiahInput } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { tanggalHariIni } from "@/lib/format";
+import { labelTanggal, rp, tanggalHariIni } from "@/lib/format";
 import type { Category, Tipe, Tx, Wallet } from "@/lib/types";
+
+const TIPE = [
+  { v: "Pemasukan", label: "Income", Ikon: ArrowDownLeft, warna: "var(--success)" },
+  { v: "Pengeluaran", label: "Expense", Ikon: ArrowUpRight, warna: "var(--danger)" },
+  { v: "Transfer", label: "Transfer", Ikon: ArrowLeftRight, warna: "var(--info)" },
+] as const;
 
 export default function TxForm({
   wallets,
@@ -33,40 +39,22 @@ export default function TxForm({
   const [tipe, setTipe] = useState<Tipe>(awal?.tipe || "Pengeluaran");
   const [tanggal, setTanggal] = useState(awal?.tanggal || tanggalHariIni());
   const [jumlah, setJumlah] = useState<number>(awal?.jumlah || 0);
-  const [walletId, setWalletId] = useState(
-    awal?.wallet_id || wallets[0]?.id || ""
-  );
-  const [walletTujuan, setWalletTujuan] = useState(
-    awal?.wallet_tujuan_id || ""
-  );
+  const [walletId, setWalletId] = useState(awal?.wallet_id || wallets[0]?.id || "");
+  const [walletTujuan, setWalletTujuan] = useState(awal?.wallet_tujuan_id || "");
   const [categoryId, setCategoryId] = useState(awal?.category_id || "");
   const [biayaAdmin, setBiayaAdmin] = useState<number>(awal?.biaya_admin || 0);
   const [catatan, setCatatan] = useState(awal?.catatan || "");
   const [sedang, setSedang] = useState(false);
 
-  const kategoriTersedia = categories.filter(
-    (c) => c.tipe === tipe && c.sistem !== 1
-  );
-
+  const transfer = tipe === "Transfer";
+  const kategoriTersedia = categories.filter((c) => c.tipe === tipe && c.sistem !== 1);
   const walletTujuanTersedia = wallets.filter((w) => w.id !== walletId);
 
   async function simpan() {
-    if (!(jumlah > 0)) {
-      toast.gagal("Nominal harus lebih dari 0.");
-      return;
-    }
-    if (!walletId) {
-      toast.gagal("Pilih dompet dulu.");
-      return;
-    }
-    if (tipe === "Transfer" && !walletTujuan) {
-      toast.gagal("Pilih dompet tujuan.");
-      return;
-    }
-    if (tipe !== "Transfer" && !categoryId) {
-      toast.gagal("Pilih kategori dulu.");
-      return;
-    }
+    if (!(jumlah > 0)) return toast.gagal("Enter an amount.");
+    if (!walletId) return toast.gagal("Select a wallet.");
+    if (transfer && !walletTujuan) return toast.gagal("Select a destination wallet.");
+    if (!transfer && !categoryId) return toast.gagal("Select a category.");
 
     setSedang(true);
     try {
@@ -77,42 +65,33 @@ export default function TxForm({
           tanggal,
           jumlah,
           wallet_id: walletId,
-          wallet_tujuan_id: tipe === "Transfer" ? walletTujuan : "",
-          category_id: tipe === "Transfer" ? "" : categoryId,
-          biaya_admin: tipe === "Transfer" ? biayaAdmin : 0,
+          wallet_tujuan_id: transfer ? walletTujuan : "",
+          category_id: transfer ? "" : categoryId,
+          biaya_admin: transfer ? biayaAdmin : 0,
           catatan,
         },
       });
 
-      toast.sukses(awal ? "Transaksi diperbarui." : "Transaksi tersimpan.");
-      if (hasil?.notif?.terkirim) {
-        toast.info("Peringatan budget dikirim ke Telegram.");
-      }
+      toast.sukses(awal ? "Transaction updated." : "Transaction saved.");
+      if (hasil?.notif?.terkirim) toast.info("Budget alert sent to Telegram.");
       picuMuatUlang();
       onSelesai();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan transaksi.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
       setSedang(false);
     }
   }
 
+  const keluar = jumlah + (transfer ? biayaAdmin : 0);
+
   return (
-    <div className="space-y-4">
-      {/* pemilih tipe */}
-      <div
-        className="grid grid-cols-3 gap-1 p-1 rounded-xl"
-        style={{ background: "var(--surface-3)" }}
-      >
-        {(
-          [
-            { v: "Pemasukan", l: "Pemasukan", i: ArrowDownLeft, w: "var(--success)" },
-            { v: "Pengeluaran", l: "Pengeluaran", i: ArrowUpRight, w: "var(--danger)" },
-            { v: "Transfer", l: "Transfer", i: ArrowLeftRight, w: "var(--info)" },
-          ] as const
-        ).map((o) => {
+    <div className="space-y-3.5">
+      {/* type */}
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-xl" style={{ background: "var(--surface-2)" }}>
+        {TIPE.map((o) => {
           const aktif = tipe === o.v;
-          const Ikon = o.i;
+          const Ikon = o.Ikon;
           return (
             <button
               key={o.v}
@@ -126,25 +105,23 @@ export default function TxForm({
               className="flex items-center justify-center gap-1.5 h-9 rounded-[9px] text-[13px] font-semibold transition"
               style={{
                 background: aktif ? "var(--surface)" : "transparent",
-                color: aktif ? o.w : "var(--muted)",
-                boxShadow: aktif ? "var(--shadow-sm)" : "none",
+                color: aktif ? o.warna : "var(--muted)",
+                boxShadow: aktif ? "var(--shadow-xs)" : "none",
               }}
             >
               <Ikon size={15} strokeWidth={2.5} />
-              <span className="hidden sm:inline">{o.l}</span>
-              <span className="sm:hidden">{o.l.slice(0, 4)}</span>
+              {o.label}
             </button>
           );
         })}
       </div>
 
-      {/* nominal */}
-      <Field label="Nominal">
-        <RupiahInput value={jumlah} onChange={setJumlah} autoFocus />
-      </Field>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Tanggal">
+      {/* amount + date */}
+      <div className="grid sm:grid-cols-2 gap-3.5">
+        <Field label="Amount">
+          <RupiahInput value={jumlah} onChange={setJumlah} autoFocus />
+        </Field>
+        <Field label="Date">
           <input
             type="date"
             className="input"
@@ -152,8 +129,11 @@ export default function TxForm({
             onChange={(e) => setTanggal(e.target.value)}
           />
         </Field>
+      </div>
 
-        <Field label={tipe === "Transfer" ? "Dari dompet" : "Dompet"}>
+      {/* wallets */}
+      <div className="grid sm:grid-cols-2 gap-3.5">
+        <Field label={transfer ? "From" : "Wallet"}>
           <select
             className="select"
             value={walletId}
@@ -162,7 +142,7 @@ export default function TxForm({
               if (e.target.value === walletTujuan) setWalletTujuan("");
             }}
           >
-            {wallets.length === 0 && <option value="">Belum ada dompet</option>}
+            {wallets.length === 0 && <option value="">No wallet</option>}
             {wallets.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.nama}
@@ -170,17 +150,15 @@ export default function TxForm({
             ))}
           </select>
         </Field>
-      </div>
 
-      {tipe === "Transfer" ? (
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Ke dompet">
+        {transfer ? (
+          <Field label="To">
             <select
               className="select"
               value={walletTujuan}
               onChange={(e) => setWalletTujuan(e.target.value)}
             >
-              <option value="">Pilih dompet tujuan</option>
+              <option value="">Select wallet</option>
               {walletTujuanTersedia.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.nama}
@@ -188,111 +166,66 @@ export default function TxForm({
               ))}
             </select>
           </Field>
+        ) : (
+          <Field label="Category">
+            <select
+              className="select"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Select category</option>
+              {kategoriTersedia.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nama}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+      </div>
 
-          <Field
-            label="Biaya admin"
-            hint="Kosongkan kalau tidak ada. Biaya ini dihitung sebagai pengeluaran."
-          >
+      {transfer && (
+        <div className="grid sm:grid-cols-2 gap-3.5">
+          <Field label="Admin fee">
             <RupiahInput value={biayaAdmin} onChange={setBiayaAdmin} />
           </Field>
+          <div className="flex items-end">
+            <div
+              className="w-full rounded-[10px] px-3 flex items-center justify-between text-[12.5px]"
+              style={{ height: 40, background: "var(--surface-2)" }}
+            >
+              <span className="muted">Total out</span>
+              <span className="num font-semibold">{rp(keluar)}</span>
+            </div>
+          </div>
         </div>
-      ) : (
-        <Field label="Kategori">
-          <select
-            className="select"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-          >
-            <option value="">Pilih kategori</option>
-            {kategoriTersedia.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nama}
-              </option>
-            ))}
-          </select>
-        </Field>
       )}
 
-      <Field label="Catatan" hint="Opsional, misalnya tempat atau keterangan.">
+      <Field label="Note">
         <textarea
           className="textarea"
+          style={{ minHeight: 56 }}
           value={catatan}
           onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Contoh: makan siang bareng tim"
+          placeholder="Optional"
         />
       </Field>
 
-      {tipe === "Transfer" && jumlah > 0 && (
-        <div
-          className="rounded-xl p-3.5 text-[13px]"
-          style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-        >
-          <RincianTransfer
-            jumlah={jumlah}
-            biaya={biayaAdmin}
-            wallets={wallets}
-            dari={walletId}
-            ke={walletTujuan}
-          />
-        </div>
+      {awal && (
+        <p className="text-[11.5px] muted">
+          Recorded {labelTanggal(awal.tanggal)}
+        </p>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>
-          Batal
+          Cancel
         </button>
         <button className="btn btn-primary" onClick={simpan} disabled={sedang}>
-          {sedang ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {awal ? "Simpan perubahan" : "Simpan"}
+          {sedang ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+          {awal ? "Save changes" : "Save"}
         </button>
       </div>
     </div>
   );
-}
-
-function RincianTransfer({
-  jumlah,
-  biaya,
-  wallets,
-  dari,
-  ke,
-}: {
-  jumlah: number;
-  biaya: number;
-  wallets: Wallet[];
-  dari: string;
-  ke: string;
-}) {
-  const namaDari = wallets.find((w) => w.id === dari)?.nama || "—";
-  const namaKe = wallets.find((w) => w.id === ke)?.nama || "belum dipilih";
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between">
-        <span className="muted">Dari {namaDari} berkurang</span>
-        <span className="num font-semibold">{rpRingkas(jumlah + biaya)}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="muted">{namaKe} bertambah</span>
-        <span className="num font-semibold" style={{ color: "var(--success)" }}>
-          {rpRingkas(jumlah)}
-        </span>
-      </div>
-      {biaya > 0 && (
-        <div className="flex justify-between">
-          <span className="muted">Biaya admin (pengeluaran)</span>
-          <span className="num" style={{ color: "var(--kritis)" }}>
-            {rpRingkas(biaya)}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function rpRingkas(n: number) {
-  const s = String(Math.round(n));
-  let out = "";
-  for (let i = s.length; i > 3; i -= 3) out = "." + s.slice(i - 3, i) + out;
-  return "Rp " + s.slice(0, ((s.length - 1) % 3) + 1) + out;
 }

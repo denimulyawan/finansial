@@ -90,7 +90,7 @@ function ToastItem({ toast, onTutup }: { toast: Toast; onTutup: () => void }) {
       <button
         onClick={onTutup}
         className="shrink-0 grid place-items-center w-7 h-7 rounded-lg muted hover:text-[var(--text)] transition"
-        aria-label="Tutup"
+        aria-label="Close"
       >
         <X size={15} />
       </button>

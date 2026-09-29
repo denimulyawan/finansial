@@ -9,7 +9,6 @@ import {
   PiggyBank,
   Plus,
   Receipt,
-  Target,
   TrendingDown,
   TrendingUp,
   Wallet as WalletIcon,
@@ -22,13 +21,13 @@ import {
   Galat,
   Kosong,
   LevelBadge,
+  Modal,
   PageHeader,
-  Progress,
   PilihBulan,
+  Progress,
   Skeleton,
 } from "@/components/ui";
 import TxForm from "@/components/TxForm";
-import { Modal } from "@/components/ui";
 import {
   JENIS_DOMPET_LABEL,
   bulanSekarang,
@@ -48,107 +47,85 @@ export default function HalamanDashboard() {
     bulan,
   });
 
+  const totalKategori =
+    data?.perKategori.reduce((a, b) => a + b.jumlah, 0) || 0;
+
   return (
     <>
       <PageHeader
         judul="Dashboard"
-        sub={
-          data
-            ? `Ringkasan ${labelBulanPanjang(data.bulan)}`
-            : "Ringkasan keuanganmu"
-        }
+        sub={data ? labelBulanPanjang(data.bulan) : undefined}
         aksi={<PilihBulan nilai={bulan} onUbah={setBulan} />}
       />
 
       {error && (
-        <div className="mb-5">
+        <div className="mb-4">
           <Galat pesan={error.message} onCobaLagi={reload} />
         </div>
       )}
 
-      {/* ------------------------ 4 kartu angka ------------------------ */}
+      {/* stat tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <KartuSisaBudget data={data} loading={loading} />
-        <KartuAngka
-          label="Pengeluaran"
+        <BudgetTile data={data} loading={loading} />
+        <StatTile
+          label="Expenses"
           nilai={data?.ringkasan.keluar}
           loading={loading}
           warna="var(--danger)"
           Ikon={ArrowUpRight}
-          sub={
-            data && data.ringkasan.biayaAdmin > 0
-              ? `termasuk ${rp(data.ringkasan.biayaAdmin)} biaya admin`
-              : undefined
-          }
         />
-        <KartuAngka
-          label="Pemasukan"
+        <StatTile
+          label="Income"
           nilai={data?.ringkasan.masuk}
           loading={loading}
           warna="var(--success)"
           Ikon={ArrowDownLeft}
         />
-        <KartuAngka
-          label="Total Saldo"
+        <StatTile
+          label="Total balance"
           nilai={data?.totalSaldo}
           loading={loading}
           warna="var(--accent)"
           Ikon={WalletIcon}
-          sub={
-            data ? `${data.saldoDompet.length} dompet aktif` : undefined
-          }
         />
       </div>
 
-      {/* --------------------------- grafik tren --------------------------- */}
+      {/* trend */}
       <Card className="mb-4" besar>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-[15px] font-semibold title">Tren 6 Bulan</h2>
-            <p className="text-[12.5px] muted mt-0.5">
-              Pemasukan dan pengeluaran tiap bulan
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-[12.5px]">
-            <Legenda warna="var(--success)" label="Pemasukan" />
-            <Legenda warna="var(--danger)" label="Pengeluaran" />
+          <h2 className="text-[14.5px] font-semibold title">Last 6 months</h2>
+          <div className="flex items-center gap-4 text-[12px]">
+            <Legend warna="var(--success)" label="Income" />
+            <Legend warna="var(--danger)" label="Expense" />
           </div>
         </div>
         {loading || !data ? (
-          <Skeleton className="w-full" />
+          <Skeleton className="w-full" style={{ height: 240 }} />
         ) : (
           <TrenChart data={data.tren} />
         )}
       </Card>
 
-      {/* ------------------- donut kategori + progress budget ------------------- */}
       <div className="grid lg:grid-cols-2 gap-4 mb-4">
+        {/* by category */}
         <Card besar>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-[15px] font-semibold title">
-                Pengeluaran per Kategori
-              </h2>
-              <p className="text-[12.5px] muted mt-0.5">
-                {labelBulanPanjang(bulan)}
-              </p>
-            </div>
+            <h2 className="text-[14.5px] font-semibold title">By category</h2>
             <Link href="/laporan" className="btn btn-ghost btn-sm">
-              Laporan
+              Reports
             </Link>
           </div>
 
           {loading || !data ? (
-            <Skeleton className="w-full" />
+            <Skeleton className="w-full" style={{ height: 200 }} />
+          ) : data.perKategori.length === 0 ? (
+            <Kosong ikon={<Receipt size={22} />} judul="No expenses yet" />
           ) : (
             <>
-              <DonutKategori
-                data={data.perKategori}
-                total={data.perKategori.reduce((a, b) => a + b.jumlah, 0)}
-              />
+              <DonutKategori data={data.perKategori} total={totalKategori} />
               <div className="mt-4 space-y-2">
                 {data.perKategori.slice(0, 5).map((k) => (
-                  <div key={k.id} className="flex items-center gap-3 text-[13px]">
+                  <div key={k.id} className="flex items-center gap-2.5 text-[13px]">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ background: k.warna }}
@@ -157,26 +134,17 @@ export default function HalamanDashboard() {
                     <span className="num font-semibold">{rp(k.jumlah)}</span>
                   </div>
                 ))}
-                {data.perKategori.length === 0 && (
-                  <p className="text-[13px] muted text-center py-2">
-                    Belum ada pengeluaran bulan ini
-                  </p>
-                )}
               </div>
             </>
           )}
         </Card>
 
+        {/* budget status */}
         <Card besar>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-[15px] font-semibold title">Status Budget</h2>
-              <p className="text-[12.5px] muted mt-0.5">
-                Aman &lt;70% · Warning 70% · Kritis 90% · Over 100%
-              </p>
-            </div>
+            <h2 className="text-[14.5px] font-semibold title">Budget status</h2>
             <Link href="/budget" className="btn btn-ghost btn-sm">
-              Atur
+              Manage
             </Link>
           </div>
 
@@ -188,21 +156,19 @@ export default function HalamanDashboard() {
             </div>
           ) : !data.budgets.items.length && !data.budgets.total ? (
             <Kosong
-              ikon={<Target size={24} />}
-              judul="Budget belum diatur"
-              isi="Tetapkan batas pengeluaran per kategori dan total bulanan supaya kamu dapat peringatan sebelum kebobolan."
+              ikon={<PiggyBank size={22} />}
+              judul="No budget set"
               aksi={
                 <Link href="/budget" className="btn btn-primary btn-sm">
-                  Atur budget sekarang
+                  Set budget
                 </Link>
               }
             />
           ) : (
             <div className="space-y-4 max-h-[330px] overflow-y-auto pr-1">
               {data.budgets.total && (
-                <BarisBudget
-                  nama="Total Bulanan"
-                  warna="var(--accent)"
+                <BudgetRow
+                  nama="Monthly total"
                   batas={data.budgets.total.batas}
                   terpakai={data.budgets.total.terpakai}
                   persen={data.budgets.total.persen}
@@ -211,10 +177,9 @@ export default function HalamanDashboard() {
                 />
               )}
               {data.budgets.items.map((b) => (
-                <BarisBudget
+                <BudgetRow
                   key={b.categoryId}
                   nama={b.nama}
-                  warna={b.warna}
                   batas={b.batas}
                   terpakai={b.terpakai}
                   persen={b.persen}
@@ -226,13 +191,13 @@ export default function HalamanDashboard() {
         </Card>
       </div>
 
-      {/* ------------------- saldo dompet + transaksi terakhir ------------------- */}
       <div className="grid lg:grid-cols-2 gap-4">
+        {/* wallets */}
         <Card besar pad={false}>
-          <div className="flex items-center justify-between p-5 pb-3">
-            <h2 className="text-[15px] font-semibold title">Saldo Dompet</h2>
+          <div className="flex items-center justify-between p-5 pb-2">
+            <h2 className="text-[14.5px] font-semibold title">Wallets</h2>
             <Link href="/dompet" className="btn btn-ghost btn-sm">
-              Kelola
+              Manage
             </Link>
           </div>
           <div className="px-5 pb-5">
@@ -244,44 +209,40 @@ export default function HalamanDashboard() {
               </div>
             ) : data.saldoDompet.length === 0 ? (
               <Kosong
-                ikon={<WalletIcon size={24} />}
-                judul="Belum ada dompet"
-                isi="Tambahkan dompet pertamamu: tunai, rekening bank, atau e-wallet."
+                ikon={<WalletIcon size={22} />}
+                judul="No wallets yet"
                 aksi={
                   <Link href="/dompet" className="btn btn-primary btn-sm">
-                    Tambah dompet
+                    Add wallet
                   </Link>
                 }
               />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {data.saldoDompet.map((w) => (
                   <div
                     key={w.id}
-                    className="flex items-center gap-3 p-3 rounded-xl"
+                    className="flex items-center gap-3 p-2.5 rounded-xl"
                     style={{ background: "var(--surface-2)" }}
                   >
                     <span
-                      className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0"
-                      style={{
-                        background: "var(--accent-soft)",
-                        color: "var(--accent)",
-                      }}
+                      className="grid place-items-center w-8 h-8 rounded-[9px] shrink-0"
+                      style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
                     >
                       {w.jenis === "piutang" || w.jenis === "hutang" ? (
-                        <ArrowLeftRight size={16} />
+                        <ArrowLeftRight size={15} />
                       ) : (
-                        <WalletIcon size={16} />
+                        <WalletIcon size={15} />
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-medium truncate">{w.nama}</p>
-                      <p className="text-[11.5px] muted">
+                      <p className="text-[13px] font-medium truncate">{w.nama}</p>
+                      <p className="text-[11px] muted">
                         {JENIS_DOMPET_LABEL[w.jenis] || w.jenis}
                       </p>
                     </div>
                     <p
-                      className="num font-semibold text-[14px]"
+                      className="num font-semibold text-[13.5px]"
                       style={{ color: w.saldo < 0 ? "var(--danger)" : undefined }}
                     >
                       {rp(w.saldo)}
@@ -293,38 +254,35 @@ export default function HalamanDashboard() {
           </div>
         </Card>
 
+        {/* recent */}
         <Card besar pad={false}>
-          <div className="flex items-center justify-between p-5 pb-3">
-            <h2 className="text-[15px] font-semibold title">Transaksi Terakhir</h2>
+          <div className="flex items-center justify-between p-5 pb-2">
+            <h2 className="text-[14.5px] font-semibold title">Recent</h2>
             <Link href="/transaksi" className="btn btn-ghost btn-sm">
-              Lihat semua
+              View all
             </Link>
           </div>
           <div className="px-5 pb-5">
             {loading || !data ? (
               <div className="space-y-2">
                 {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+                  <Skeleton key={i} className="h-11 w-full" />
                 ))}
               </div>
             ) : data.transaksiTerakhir.length === 0 ? (
               <Kosong
-                ikon={<Receipt size={24} />}
-                judul="Belum ada transaksi"
-                isi="Mulai catat pengeluaran pertamamu. Cukup beberapa detik."
+                ikon={<Receipt size={22} />}
+                judul="No transactions"
                 aksi={
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => setCepat(true)}
-                  >
-                    <Plus size={16} /> Catat sekarang
+                  <button className="btn btn-primary btn-sm" onClick={() => setCepat(true)}>
+                    <Plus size={15} /> Add one
                   </button>
                 }
               />
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {data.transaksiTerakhir.map((t) => (
-                  <BarisTx key={t.id} tx={t} />
+                  <TxRow key={t.id} tx={t} />
                 ))}
               </div>
             )}
@@ -332,24 +290,22 @@ export default function HalamanDashboard() {
         </Card>
       </div>
 
-      {/* tombol catat mengambang (HP) */}
       <button
         onClick={() => setCepat(true)}
-        className="lg:hidden fixed bottom-5 right-5 z-30 flex items-center gap-2 h-13 px-5 rounded-full text-white font-semibold text-[14px]"
+        className="lg:hidden fixed bottom-5 right-5 z-30 flex items-center gap-2 px-5 rounded-full text-white font-semibold text-[13.5px]"
         style={{
-          height: 52,
+          height: 48,
           background: "var(--accent)",
-          boxShadow: "0 14px 32px -10px color-mix(in srgb, var(--accent) 85%, transparent)",
+          boxShadow: "0 12px 28px -10px color-mix(in srgb, var(--accent) 80%, transparent)",
         }}
       >
-        <Plus size={19} strokeWidth={2.6} /> Catat
+        <Plus size={18} strokeWidth={2.6} /> New
       </button>
 
       <Modal
         buka={cepat}
         onTutup={() => setCepat(false)}
-        judul="Catat transaksi"
-        sub="Pemasukan, pengeluaran, atau pindah antar dompet."
+        judul="New transaction"
         lebar={620}
       >
         {bootstrap && (
@@ -365,9 +321,9 @@ export default function HalamanDashboard() {
   );
 }
 
-/* ================================ KOMPONEN ================================ */
+/* ================================ COMPONENTS ============================== */
 
-function Legenda({ warna, label }: { warna: string; label: string }) {
+function Legend({ warna, label }: { warna: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5 muted">
       <span className="w-2.5 h-2.5 rounded-full" style={{ background: warna }} />
@@ -376,48 +332,45 @@ function Legenda({ warna, label }: { warna: string; label: string }) {
   );
 }
 
-function KartuAngka({
+function StatTile({
   label,
   nilai,
   loading,
   warna,
   Ikon,
-  sub,
 }: {
   label: string;
   nilai: number | undefined;
   loading: boolean;
   warna: string;
   Ikon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  sub?: string;
 }) {
   return (
     <div className="card card-pad anim-up">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[12.5px] font-medium muted">{label}</span>
+        <span className="text-[12px] font-medium muted truncate">{label}</span>
         <span
-          className="grid place-items-center w-8 h-8 rounded-[10px] shrink-0"
+          className="grid place-items-center w-7 h-7 rounded-[9px] shrink-0"
           style={{
-            background: `color-mix(in srgb, ${warna} 13%, transparent)`,
+            background: `color-mix(in srgb, ${warna} 11%, transparent)`,
             color: warna,
           }}
         >
-          <Ikon size={16} strokeWidth={2.4} />
+          <Ikon size={15} strokeWidth={2.4} />
         </span>
       </div>
       {loading ? (
         <Skeleton className="h-6 w-24" />
       ) : (
-        <p className="num text-[19px] sm:text-[21px] font-semibold title leading-none">
+        <p className="num text-[18px] sm:text-[20px] font-semibold title leading-none">
           {rp(nilai ?? 0)}
         </p>
       )}
-      {sub && !loading && <p className="text-[11.5px] muted mt-2">{sub}</p>}
     </div>
   );
 }
 
-function KartuSisaBudget({
+function BudgetTile({
   data,
   loading,
 }: {
@@ -428,16 +381,18 @@ function KartuSisaBudget({
 
   return (
     <div className="card card-pad anim-up">
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <span className="text-[12.5px] font-medium muted">Sisa Budget</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[12px] font-medium muted truncate">
+          Budget left
+        </span>
         <span
-          className="grid place-items-center w-8 h-8 rounded-[10px] shrink-0"
+          className="grid place-items-center w-7 h-7 rounded-[9px] shrink-0"
           style={{
-            background: "color-mix(in srgb, var(--accent) 13%, transparent)",
+            background: "color-mix(in srgb, var(--accent) 11%, transparent)",
             color: "var(--accent)",
           }}
         >
-          <PiggyBank size={16} strokeWidth={2.4} />
+          <PiggyBank size={15} strokeWidth={2.4} />
         </span>
       </div>
 
@@ -446,37 +401,30 @@ function KartuSisaBudget({
       ) : total ? (
         <>
           <p
-            className="num text-[19px] sm:text-[21px] font-semibold title leading-none"
+            className="num text-[18px] sm:text-[20px] font-semibold title leading-none"
             style={{ color: total.sisa < 0 ? "var(--danger)" : undefined }}
           >
             {rp(total.sisa)}
           </p>
-          <div className="flex items-center gap-2 mt-2.5">
+          <div className="flex items-center gap-2 mt-2">
             <LevelBadge level={total.level} />
-            <span className="text-[11.5px] muted">{persen(total.persen, 0)}</span>
+            <span className="text-[11px] muted">{persen(total.persen, 0)}</span>
           </div>
         </>
       ) : (
-        <>
-          <p className="text-[19px] font-semibold title leading-none muted">
-            Belum diatur
-          </p>
-          <Link
-            href="/budget"
-            className="text-[11.5px] mt-2 inline-block"
-            style={{ color: "var(--accent)" }}
-          >
-            Atur budget →
-          </Link>
-        </>
+        <Link
+          href="/budget"
+          className="text-[15px] font-semibold title muted"
+        >
+          Not set
+        </Link>
       )}
     </div>
   );
 }
 
-function BarisBudget({
+function BudgetRow({
   nama,
-  warna,
   batas,
   terpakai,
   persen: pct,
@@ -484,62 +432,57 @@ function BarisBudget({
   tebal = false,
 }: {
   nama: string;
-  warna: string;
   batas: number;
   terpakai: number;
   persen: number;
   level: string;
   tebal?: boolean;
 }) {
+  const sisa = batas - terpakai;
   return (
     <div>
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <span
-          className={`truncate ${tebal ? "text-[13.5px] font-semibold" : "text-[13px] text-2"}`}
+          className={`truncate ${tebal ? "text-[13px] font-semibold" : "text-[12.5px] text-2"}`}
         >
           {nama}
         </span>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="num text-[12.5px] font-medium">
+          <span className="num text-[12px] font-medium">
             {rp(terpakai)}
             <span className="muted"> / {rp(batas)}</span>
           </span>
           {level !== "aman" && <LevelBadge level={level} />}
         </div>
       </div>
-      <Progress persen={pct} level={level} tinggi={tebal ? 8 : 6} />
+      <Progress persen={pct} level={level} tinggi={tebal ? 7 : 5} />
       <div className="flex justify-between mt-1">
-        <span className="text-[11px] muted">{persen(pct, 0)} terpakai</span>
+        <span className="text-[10.5px] muted">{persen(pct, 0)} used</span>
         <span
-          className="text-[11px]"
-          style={{
-            color:
-              batas - terpakai < 0 ? "var(--danger)" : "var(--muted)",
-          }}
+          className="text-[10.5px]"
+          style={{ color: sisa < 0 ? "var(--danger)" : "var(--muted)" }}
         >
-          {batas - terpakai < 0
-            ? `lebih ${rp(Math.abs(batas - terpakai))}`
-            : `sisa ${rp(batas - terpakai)}`}
+          {sisa < 0 ? `${rp(Math.abs(sisa))} over` : `${rp(sisa)} left`}
         </span>
       </div>
     </div>
   );
 }
 
-function BarisTx({ tx }: { tx: Tx }) {
+function TxRow({ tx }: { tx: Tx }) {
   const masuk = tx.tipe === "Pemasukan";
   const transfer = tx.tipe === "Transfer";
 
   return (
     <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--surface-2)] transition">
       <span
-        className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0"
+        className="grid place-items-center w-8 h-8 rounded-[9px] shrink-0"
         style={{
           background: transfer
-            ? "color-mix(in srgb, var(--info) 13%, transparent)"
+            ? "color-mix(in srgb, var(--info) 11%, transparent)"
             : masuk
-              ? "color-mix(in srgb, var(--success) 13%, transparent)"
-              : "color-mix(in srgb, var(--danger) 13%, transparent)",
+              ? "color-mix(in srgb, var(--success) 11%, transparent)"
+              : "color-mix(in srgb, var(--danger) 11%, transparent)",
           color: transfer
             ? "var(--info)"
             : masuk
@@ -548,42 +491,37 @@ function BarisTx({ tx }: { tx: Tx }) {
         }}
       >
         {transfer ? (
-          <ArrowLeftRight size={16} />
+          <ArrowLeftRight size={15} />
         ) : masuk ? (
-          <TrendingUp size={16} />
+          <TrendingUp size={15} />
         ) : (
-          <TrendingDown size={16} />
+          <TrendingDown size={15} />
         )}
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-medium truncate">
+        <p className="text-[13px] font-medium truncate">
           {transfer
             ? `${tx.wallet || "—"} → ${tx.walletTujuan || "—"}`
             : tx.kategori || "—"}
         </p>
-        <p className="text-[11.5px] muted truncate">
+        <p className="text-[11px] muted truncate">
           {labelTanggalRelatif(tx.tanggal)}
           {tx.catatan ? ` · ${tx.catatan}` : ""}
-          {!transfer && tx.wallet ? ` · ${tx.wallet}` : ""}
         </p>
       </div>
 
       <p
-        className="num font-semibold text-[13.5px] shrink-0 text-right"
+        className="num font-semibold text-[13px] shrink-0 text-right"
         style={{
-          color: transfer
-            ? "var(--text-2)"
-            : masuk
-              ? "var(--success)"
-              : "var(--danger)",
+          color: transfer ? "var(--text-2)" : masuk ? "var(--success)" : "var(--danger)",
         }}
       >
         {masuk ? "+" : transfer ? "" : "−"}
         {rp(tx.jumlah)}
         {tx.biaya_admin > 0 && (
-          <span className="block text-[10.5px] muted font-normal">
-            +{rp(tx.biaya_admin)} admin
+          <span className="block text-[10px] muted font-normal">
+            +{rp(tx.biaya_admin)} fee
           </span>
         )}
       </p>

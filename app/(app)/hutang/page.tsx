@@ -7,9 +7,8 @@ import {
   CheckCircle2,
   HandCoins,
   Plus,
-  Wallet as WalletIcon,
 } from "lucide-react";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, idBaru } from "@/lib/api";
 import { picuBootstrap, picuMuatUlang, useApi } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import {
@@ -25,7 +24,6 @@ import { labelTanggal, rp, tanggalHariIni } from "@/lib/format";
 import type { Wallet } from "@/lib/types";
 
 type WalletSaldo = Wallet & { saldo: number; jmlTransaksi: number };
-
 type Mode = "piutang-baru" | "hutang-baru" | "terima" | "bayar";
 
 interface Konteks {
@@ -53,32 +51,32 @@ export default function HalamanHutang() {
   async function arsipkan(w: WalletSaldo) {
     try {
       await api("wallet.archive", { id: w.id, aktif: 0, paksa: true });
-      toast.sukses(`${w.nama} dipindahkan ke arsip.`);
+      toast.sukses(`${w.nama} archived.`);
       setLunas(null);
       picuBootstrap();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal mengarsipkan.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not archive.");
     }
   }
 
   return (
     <>
       <PageHeader
-        judul="Hutang & Piutang"
-        sub="Uang yang dipinjamkan dan yang kamu pinjam, supaya saldo tetap jujur."
+        judul="Debts"
+        sub="Money you lent and money you owe"
         aksi={
           <>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setForm({ mode: "hutang-baru" })}
             >
-              <ArrowDownLeft size={15} /> Saya pinjam
+              <ArrowDownLeft size={14} /> I borrow
             </button>
             <button
               className="btn btn-primary btn-sm"
               onClick={() => setForm({ mode: "piutang-baru" })}
             >
-              <Plus size={16} strokeWidth={2.6} /> Saya pinjamkan
+              <Plus size={15} strokeWidth={2.6} /> I lend
             </button>
           </>
         }
@@ -91,53 +89,22 @@ export default function HalamanHutang() {
       )}
 
       <div className="grid sm:grid-cols-2 gap-4 mb-5">
-        <div className="card card-lg card-pad">
-          <div className="flex items-center gap-2.5 mb-3">
-            <span
-              className="grid place-items-center w-9 h-9 rounded-[10px]"
-              style={{
-                background: "color-mix(in srgb, var(--success) 13%, transparent)",
-                color: "var(--success)",
-              }}
-            >
-              <ArrowUpRight size={17} />
-            </span>
-            <div>
-              <p className="text-[13px] font-semibold">Piutang</p>
-              <p className="text-[11.5px] muted">Orang berhutang ke kamu</p>
-            </div>
-          </div>
-          <p className="num text-[22px] font-semibold title leading-none" style={{ color: "var(--success)" }}>
-            {rp(totalPiutang)}
-          </p>
-          <p className="text-[11.5px] muted mt-2">
-            {piutang.length} orang belum melunasi
-          </p>
-        </div>
-
-        <div className="card card-lg card-pad">
-          <div className="flex items-center gap-2.5 mb-3">
-            <span
-              className="grid place-items-center w-9 h-9 rounded-[10px]"
-              style={{
-                background: "color-mix(in srgb, var(--danger) 13%, transparent)",
-                color: "var(--danger)",
-              }}
-            >
-              <ArrowDownLeft size={17} />
-            </span>
-            <div>
-              <p className="text-[13px] font-semibold">Hutang</p>
-              <p className="text-[11.5px] muted">Kamu berhutang ke orang</p>
-            </div>
-          </div>
-          <p className="num text-[22px] font-semibold title leading-none" style={{ color: "var(--danger)" }}>
-            {rp(Math.abs(totalHutang))}
-          </p>
-          <p className="text-[11.5px] muted mt-2">
-            {hutang.length} hutang belum dibayar
-          </p>
-        </div>
+        <Summary
+          judul="Receivable"
+          ket="Owed to me"
+          nilai={rp(totalPiutang)}
+          catatan={`${piutang.length} open`}
+          warna="var(--success)"
+          Ikon={ArrowUpRight}
+        />
+        <Summary
+          judul="Payable"
+          ket="I owe"
+          nilai={rp(Math.abs(totalHutang))}
+          catatan={`${hutang.length} open`}
+          warna="var(--danger)"
+          Ikon={ArrowDownLeft}
+        />
       </div>
 
       {loading ? (
@@ -149,24 +116,19 @@ export default function HalamanHutang() {
       ) : (
         <div className="grid lg:grid-cols-2 gap-4">
           <DaftarUtang
-            judul="Piutang"
-            keterangan="Orang yang berhutang ke kamu"
-            kosongIsi="Belum ada piutang. Kalau kamu meminjamkan uang ke seseorang, catat di sini supaya saldo dompetmu tetap benar."
+            judul="Receivable"
             items={piutang}
             jenis="piutang"
-            aksiLabel="Terima"
+            aksiLabel="Receive"
             onAksi={(w) => setForm({ mode: "terima", wallet: w })}
             onTambah={() => setForm({ mode: "piutang-baru" })}
             onLunas={(w) => setLunas(w)}
           />
-
           <DaftarUtang
-            judul="Hutang"
-            keterangan="Utangmu ke orang lain"
-            kosongIsi="Belum ada hutang tercatat. Kalau kamu meminjam uang, catat di sini supaya pengeluaranmu tidak terlihat lebih besar dari sebenarnya."
+            judul="Payable"
             items={hutang}
             jenis="hutang"
-            aksiLabel="Bayar"
+            aksiLabel="Pay"
             onAksi={(w) => setForm({ mode: "bayar", wallet: w })}
             onTambah={() => setForm({ mode: "hutang-baru" })}
             onLunas={(w) => setLunas(w)}
@@ -178,8 +140,7 @@ export default function HalamanHutang() {
         buka={!!form}
         onTutup={() => setForm(null)}
         judul={judulForm(form?.mode)}
-        sub={subForm(form?.mode)}
-        lebar={520}
+        lebar={480}
       >
         {form && (
           <FormUtang
@@ -198,27 +159,23 @@ export default function HalamanHutang() {
       <Modal
         buka={!!lunas}
         onTutup={() => setLunas(null)}
-        judul="Sudah lunas?"
-        lebar={430}
+        judul="Settled?"
+        lebar={400}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setLunas(null)}>
-              Nanti saja
+              Not yet
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => lunas && arsipkan(lunas)}
-            >
-              Pindahkan ke arsip
+            <button className="btn btn-primary" onClick={() => lunas && arsipkan(lunas)}>
+              Archive
             </button>
           </>
         }
       >
         {lunas && (
-          <p className="text-[13.5px] text-2 leading-relaxed">
-            <b>{lunas.nama}</b> sudah lunas. Memindahkannya ke arsip membuat daftar
-            ini tetap bersih — riwayat transaksinya tetap tersimpan dan bisa
-            dilihat di halaman Transaksi.
+          <p className="text-[13px] text-2 leading-relaxed">
+            <b>{lunas.nama}</b> is settled. Archiving keeps this list clean —
+            the history stays in Transactions.
           </p>
         )}
       </Modal>
@@ -229,39 +186,60 @@ export default function HalamanHutang() {
 function judulForm(mode?: Mode): string {
   switch (mode) {
     case "piutang-baru":
-      return "Catat piutang baru";
+      return "New receivable";
     case "hutang-baru":
-      return "Catat hutang baru";
+      return "New payable";
     case "terima":
-      return "Terima pembayaran";
+      return "Receive payment";
     case "bayar":
-      return "Bayar hutang";
+      return "Pay debt";
     default:
       return "";
   }
 }
 
-function subForm(mode?: Mode): string | undefined {
-  switch (mode) {
-    case "piutang-baru":
-      return "Uang keluar dari dompetmu, tapi bukan pengeluaran.";
-    case "hutang-baru":
-      return "Uang masuk ke dompetmu, tapi bukan pemasukan.";
-    case "terima":
-      return "Uang kembali ke dompetmu.";
-    case "bayar":
-      return "Uang keluar dari dompetmu untuk melunasi.";
-    default:
-      return undefined;
-  }
+function Summary({
+  judul,
+  ket,
+  nilai,
+  catatan,
+  warna,
+  Ikon,
+}: {
+  judul: string;
+  ket: string;
+  nilai: string;
+  catatan: string;
+  warna: string;
+  Ikon: React.ComponentType<{ size?: number }>;
+}) {
+  return (
+    <div className="card card-lg card-pad">
+      <div className="flex items-center gap-2.5 mb-3">
+        <span
+          className="grid place-items-center w-8 h-8 rounded-[9px]"
+          style={{
+            background: `color-mix(in srgb, ${warna} 11%, transparent)`,
+            color: warna,
+          }}
+        >
+          <Ikon size={16} />
+        </span>
+        <div>
+          <p className="text-[13px] font-semibold">{judul}</p>
+          <p className="text-[11px] muted">{ket}</p>
+        </div>
+      </div>
+      <p className="num text-[21px] font-semibold title leading-none" style={{ color: warna }}>
+        {nilai}
+      </p>
+      <p className="text-[11px] muted mt-2">{catatan}</p>
+    </div>
+  );
 }
-
-/* ============================== DAFTAR UTANG ============================== */
 
 function DaftarUtang({
   judul,
-  keterangan,
-  kosongIsi,
   items,
   jenis,
   aksiLabel,
@@ -270,8 +248,6 @@ function DaftarUtang({
   onLunas,
 }: {
   judul: string;
-  keterangan: string;
-  kosongIsi: string;
   items: WalletSaldo[];
   jenis: "piutang" | "hutang";
   aksiLabel: string;
@@ -282,31 +258,27 @@ function DaftarUtang({
   const warna = jenis === "piutang" ? "var(--success)" : "var(--danger)";
 
   return (
-    <div className="card card-lg" >
-      <div className="flex items-center justify-between p-5 pb-3">
-        <div>
-          <h2 className="text-[15px] font-semibold title">{judul}</h2>
-          <p className="text-[12.5px] muted mt-0.5">{keterangan}</p>
-        </div>
-        <button className="btn btn-ghost btn-icon btn-sm" onClick={onTambah} title="Tambah">
-          <Plus size={16} />
+    <div className="card card-lg">
+      <div className="flex items-center justify-between p-5 pb-2.5">
+        <h2 className="text-[14.5px] font-semibold title">{judul}</h2>
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onTambah} title="Add">
+          <Plus size={15} />
         </button>
       </div>
 
       <div className="px-5 pb-5">
         {items.length === 0 ? (
           <Kosong
-            ikon={<HandCoins size={24} />}
-            judul={`Belum ada ${judul.toLowerCase()}`}
-            isi={kosongIsi}
+            ikon={<HandCoins size={22} />}
+            judul="Nothing here"
             aksi={
               <button className="btn btn-ghost btn-sm" onClick={onTambah}>
-                <Plus size={15} /> Tambah
+                <Plus size={14} /> Add
               </button>
             }
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {items.map((w) => {
               const nominal = jenis === "piutang" ? w.saldo : Math.abs(w.saldo);
               const beres = Math.abs(w.saldo) < 0.5;
@@ -314,14 +286,14 @@ function DaftarUtang({
               return (
                 <div
                   key={w.id}
-                  className="rounded-xl p-3.5"
+                  className="rounded-xl p-3"
                   style={{ background: "var(--surface-2)" }}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0 font-semibold text-[12.5px]"
+                      className="grid place-items-center w-8 h-8 rounded-[9px] shrink-0 font-semibold text-[11.5px]"
                       style={{
-                        background: `color-mix(in srgb, ${warna} 13%, transparent)`,
+                        background: `color-mix(in srgb, ${warna} 11%, transparent)`,
                         color: warna,
                       }}
                     >
@@ -329,38 +301,32 @@ function DaftarUtang({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-medium truncate">{w.nama}</p>
-                      <p className="text-[11px] muted truncate">
-                        {w.jmlTransaksi} transaksi
+                      <p className="text-[13px] font-medium truncate">{w.nama}</p>
+                      <p className="text-[10.5px] muted truncate">
+                        {w.jmlTransaksi} entries
                         {w.catatan ? ` · ${w.catatan}` : ""}
                       </p>
                     </div>
 
                     <p
-                      className="num font-semibold text-[14px] shrink-0"
+                      className="num font-semibold text-[13.5px] shrink-0"
                       style={{ color: beres ? "var(--muted)" : warna }}
                     >
                       {rp(nominal)}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-3">
+                  <div className="flex items-center gap-2 mt-2.5">
                     {beres ? (
-                      <button
-                        className="btn btn-ghost btn-sm flex-1"
-                        onClick={() => onLunas(w)}
-                      >
-                        <CheckCircle2 size={14} /> Sudah lunas
+                      <button className="btn btn-ghost btn-sm flex-1" onClick={() => onLunas(w)}>
+                        <CheckCircle2 size={13} /> Settled
                       </button>
                     ) : (
-                      <button
-                        className="btn btn-ghost btn-sm flex-1"
-                        onClick={() => onAksi(w)}
-                      >
+                      <button className="btn btn-ghost btn-sm flex-1" onClick={() => onAksi(w)}>
                         {jenis === "piutang" ? (
-                          <ArrowDownLeft size={14} />
+                          <ArrowDownLeft size={13} />
                         ) : (
-                          <ArrowUpRight size={14} />
+                          <ArrowUpRight size={13} />
                         )}
                         {aksiLabel}
                       </button>
@@ -376,7 +342,7 @@ function DaftarUtang({
   );
 }
 
-/* =============================== FORM UTANG =============================== */
+/* ================================== FORM ================================== */
 
 function FormUtang({
   konteks,
@@ -391,7 +357,6 @@ function FormUtang({
 }) {
   const toast = useToast();
   const { mode, wallet } = konteks;
-
   const butuhNama = mode === "piutang-baru" || mode === "hutang-baru";
 
   const [nama, setNama] = useState(wallet?.nama || "");
@@ -402,18 +367,9 @@ function FormUtang({
   const [sedang, setSedang] = useState(false);
 
   async function simpan() {
-    if (butuhNama && !nama.trim()) {
-      toast.gagal("Nama orangnya wajib diisi.");
-      return;
-    }
-    if (!dompetId) {
-      toast.gagal("Pilih dompet dulu. Tambahkan dompet di menu Dompet.");
-      return;
-    }
-    if (!(jumlah > 0)) {
-      toast.gagal("Nominal harus lebih dari 0.");
-      return;
-    }
+    if (butuhNama && !nama.trim()) return toast.gagal("Enter a name.");
+    if (!dompetId) return toast.gagal("Add a wallet first.");
+    if (!(jumlah > 0)) return toast.gagal("Enter an amount.");
 
     setSedang(true);
     try {
@@ -422,14 +378,13 @@ function FormUtang({
       if (butuhNama) {
         const jenis = mode === "piutang-baru" ? "piutang" : "hutang";
         const hasil = await api<{ wallet: { id: string } }>("wallet.save", {
-          wallet: { nama: nama.trim(), jenis, saldo_awal: 0, catatan },
+          wallet: { id: idBaru(), nama: nama.trim(), jenis, saldo_awal: 0, catatan },
         });
         walletId = hasil.wallet.id;
       }
 
       let dari = dompetId;
       let ke = walletId;
-
       if (mode === "hutang-baru" || mode === "bayar") {
         dari = walletId;
         ke = dompetId;
@@ -437,6 +392,7 @@ function FormUtang({
 
       await api("tx.save", {
         transaction: {
+          id: idBaru(),
           tipe: "Transfer",
           tanggal,
           jumlah,
@@ -446,58 +402,51 @@ function FormUtang({
           catatan:
             catatan ||
             (mode === "piutang-baru"
-              ? "Pinjaman diberikan"
+              ? "Loan given"
               : mode === "hutang-baru"
-                ? "Pinjaman diterima"
+                ? "Loan received"
                 : mode === "terima"
-                  ? "Pembayaran piutang"
-                  : "Pembayaran hutang"),
+                  ? "Receivable payment"
+                  : "Payable payment"),
         },
       });
 
-      toast.sukses("Tercatat.");
+      toast.sukses("Saved.");
       onSelesai();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menyimpan.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
       setSedang(false);
     }
   }
 
   return (
-    <div className="space-y-4">
-      {butuhNama && (
-        <Field label="Nama orang">
+    <div className="space-y-3.5">
+      {butuhNama ? (
+        <Field label="Person">
           <input
             className="input"
             value={nama}
             autoFocus
-            placeholder="Contoh: Budi"
+            placeholder="Name"
             onChange={(e) => setNama(e.target.value)}
           />
         </Field>
-      )}
-
-      {!butuhNama && wallet && (
-        <div
-          className="rounded-xl p-3.5"
-          style={{ background: "var(--surface-2)" }}
-        >
-          <div className="flex items-center justify-between">
+      ) : (
+        wallet && (
+          <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: "var(--surface-2)" }}>
             <span className="text-[13px] text-2">{wallet.nama}</span>
-            <span className="num font-semibold text-[14px]">
-              {rp(Math.abs(wallet.saldo))}
-            </span>
+            <span className="num font-semibold text-[13.5px]">{rp(Math.abs(wallet.saldo))}</span>
           </div>
-        </div>
+        )
       )}
 
-      <Field label="Nominal">
+      <Field label="Amount">
         <RupiahInput value={jumlah} onChange={setJumlah} autoFocus={!butuhNama} />
       </Field>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Tanggal">
+      <div className="grid sm:grid-cols-2 gap-3.5">
+        <Field label="Date">
           <input
             type="date"
             className="input"
@@ -506,13 +455,9 @@ function FormUtang({
           />
         </Field>
 
-        <Field label="Dompet lawan">
-          <select
-            className="select"
-            value={dompetId}
-            onChange={(e) => setDompetId(e.target.value)}
-          >
-            {walletBiasa.length === 0 && <option value="">Belum ada dompet</option>}
+        <Field label="Wallet">
+          <select className="select" value={dompetId} onChange={(e) => setDompetId(e.target.value)}>
+            {walletBiasa.length === 0 && <option value="">No wallet</option>}
             {walletBiasa.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.nama}
@@ -522,49 +467,27 @@ function FormUtang({
         </Field>
       </div>
 
-      <Field label="Catatan" hint="Opsional.">
+      <Field label="Note">
         <input
           className="input"
           value={catatan}
-          placeholder="Contoh: buat modal usaha"
+          placeholder="Optional"
           onChange={(e) => setCatatan(e.target.value)}
         />
       </Field>
 
-      <div
-        className="rounded-xl p-3.5 text-[12.5px] text-2 leading-relaxed"
-        style={{ background: "var(--surface-2)" }}
-      >
-        <p className="font-semibold mb-1 flex items-center gap-1.5">
-          <WalletIcon size={14} /> Yang terjadi pada saldo
+      {!butuhNama && wallet && (
+        <p className="text-[11.5px] muted">
+          {labelTanggal(tanggal)} · {rp(jumlah)}
         </p>
-        {mode === "piutang-baru" && (
-          <p>
-            Dompetmu berkurang {rp(jumlah)} dan pindah menjadi piutang. Bukan
-            pengeluaran, jadi laporan bulananmu tidak ikut membengkak.
-          </p>
-        )}
-        {mode === "hutang-baru" && (
-          <p>
-            Dompetmu bertambah {rp(jumlah)} dan muncul hutang {rp(jumlah)}. Bukan
-            pemasukan, jadi laporanmu tetap jujur.
-          </p>
-        )}
-        {mode === "terima" && (
-          <p>
-            Dompetmu bertambah {rp(jumlah)} dan piutang {wallet?.nama} berkurang
-            dengan jumlah yang sama.
-          </p>
-        )}
-        {mode === "bayar" && <p>Dompetmu berkurang {rp(jumlah)} untuk melunasi hutang.</p>}
-      </div>
+      )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>
-          Batal
+          Cancel
         </button>
         <button className="btn btn-primary" onClick={simpan} disabled={sedang}>
-          {sedang ? "Menyimpan…" : "Simpan"}
+          {sedang ? "Saving…" : "Save"}
         </button>
       </div>
     </div>

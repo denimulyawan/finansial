@@ -5,10 +5,10 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
-  Filter,
   Pencil,
   Plus,
   Receipt,
+  SlidersHorizontal,
   Search,
   Trash2,
   X,
@@ -18,14 +18,7 @@ import { picuMuatUlang, useApi } from "@/lib/hooks";
 import { useAuth } from "@/components/auth";
 import { useToast } from "@/components/toast";
 import TxForm from "@/components/TxForm";
-import {
-  Card,
-  Galat,
-  Kosong,
-  Modal,
-  PageHeader,
-  Skeleton,
-} from "@/components/ui";
+import { Card, Galat, Kosong, Modal, PageHeader, Skeleton } from "@/components/ui";
 import {
   bulanSekarang,
   labelTanggal,
@@ -49,8 +42,8 @@ export default function HalamanTransaksi() {
   const [q, setQ] = useState("");
   const [tampilFilter, setTampilFilter] = useState(false);
 
-  /* Jeda 400 ms sebelum mencari. Tanpa ini setiap huruf yang diketik memicu
-     satu permintaan ke Apps Script, dan aplikasinya terasa sangat berat. */
+  /* Wait 400 ms before searching. Without this every keystroke fires a
+     request to Apps Script and the app feels very slow. */
   useEffect(() => {
     const jeda = setTimeout(() => setQ(qInput), 400);
     return () => clearTimeout(jeda);
@@ -63,18 +56,10 @@ export default function HalamanTransaksi() {
   const [hapus, setHapus] = useState<Tx | null>(null);
   const [menghapus, setMenghapus] = useState(false);
 
-  const { data, loading, error, reload } = useApi<{
-    items: Tx[];
-    total: number;
-  }>("tx.list", {
-    from: dari,
-    to: sampai,
-    tipe,
-    walletId,
-    categoryId,
-    q,
-    limit: 500,
-  });
+  const { data, loading, error, reload } = useApi<{ items: Tx[]; total: number }>(
+    "tx.list",
+    { from: dari, to: sampai, tipe, walletId, categoryId, q, limit: 500 }
+  );
 
   const items = data?.items || [];
 
@@ -94,7 +79,12 @@ export default function HalamanTransaksi() {
   }, [items]);
 
   const adaFilter =
-    !!tipe || !!walletId || !!categoryId || !!q || dari !== AWAL_BULAN() || sampai !== tanggalHariIni();
+    !!tipe ||
+    !!walletId ||
+    !!categoryId ||
+    !!q ||
+    dari !== AWAL_BULAN() ||
+    sampai !== tanggalHariIni();
 
   function bersihkan() {
     setTipe("");
@@ -110,17 +100,12 @@ export default function HalamanTransaksi() {
     if (!hapus) return;
     setMenghapus(true);
     try {
-      const hasil = await api<{ notif?: { terkirim?: number } }>("tx.delete", {
-        id: hapus.id,
-      });
-      toast.sukses("Transaksi dihapus.");
-      if (hasil?.notif?.terkirim) {
-        toast.info("Status budget diperbarui di Telegram.");
-      }
+      await api("tx.delete", { id: hapus.id });
+      toast.sukses("Transaction deleted.");
       setHapus(null);
       picuMuatUlang();
     } catch (e) {
-      toast.gagal(e instanceof ApiError ? e.message : "Gagal menghapus.");
+      toast.gagal(e instanceof ApiError ? e.message : "Could not delete.");
     } finally {
       setMenghapus(false);
     }
@@ -133,39 +118,37 @@ export default function HalamanTransaksi() {
   return (
     <>
       <PageHeader
-        judul="Transaksi"
-        sub={`${items.length} transaksi ditemukan`}
+        judul="Transactions"
+        sub={`${items.length} shown`}
         aksi={
           <>
             <button
               className="btn btn-ghost btn-sm lg:hidden"
               onClick={() => setTampilFilter((v) => !v)}
             >
-              <Filter size={15} /> Filter
+              <SlidersHorizontal size={14} /> Filter
             </button>
             <button
               className="btn btn-primary btn-sm"
               onClick={() => setForm({ buka: true, awal: null })}
             >
-              <Plus size={16} strokeWidth={2.6} /> Catat
+              <Plus size={15} strokeWidth={2.6} /> New
             </button>
           </>
         }
       />
 
-      {/* ------------------------------ filter ------------------------------ */}
-      <div
-        className={`card card-lg card-pad mb-4 ${tampilFilter ? "" : "hidden lg:block"}`}
-      >
+      {/* filters */}
+      <div className={`card card-lg card-pad mb-4 ${tampilFilter ? "" : "hidden lg:block"}`}>
         <div className="grid lg:grid-cols-12 gap-3">
           <div className="lg:col-span-4 relative">
             <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 muted pointer-events-none"
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 muted pointer-events-none"
             />
             <input
-              className="input pl-10"
-              placeholder="Cari catatan, kategori, atau nominal…"
+              className="input pl-9"
+              placeholder="Search…"
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}
             />
@@ -177,7 +160,6 @@ export default function HalamanTransaksi() {
               className="input"
               value={dari}
               onChange={(e) => setDari(e.target.value)}
-              title="Dari tanggal"
             />
           </div>
 
@@ -187,7 +169,6 @@ export default function HalamanTransaksi() {
               className="input"
               value={sampai}
               onChange={(e) => setSampai(e.target.value)}
-              title="Sampai tanggal"
             />
           </div>
 
@@ -200,9 +181,9 @@ export default function HalamanTransaksi() {
                 setCategoryId("");
               }}
             >
-              <option value="">Semua tipe</option>
-              <option value="Pemasukan">Pemasukan</option>
-              <option value="Pengeluaran">Pengeluaran</option>
+              <option value="">All types</option>
+              <option value="Pemasukan">Income</option>
+              <option value="Pengeluaran">Expense</option>
               <option value="Transfer">Transfer</option>
             </select>
           </div>
@@ -213,7 +194,7 @@ export default function HalamanTransaksi() {
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
             >
-              <option value="">Semua dompet</option>
+              <option value="">All wallets</option>
               {(bootstrap?.wallets || []).map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.nama}
@@ -229,7 +210,7 @@ export default function HalamanTransaksi() {
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
               >
-                <option value="">Semua kategori</option>
+                <option value="">All categories</option>
                 {kategoriTampil.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nama}
@@ -242,30 +223,19 @@ export default function HalamanTransaksi() {
           {adaFilter && (
             <div className="lg:col-span-3 flex items-end">
               <button className="btn btn-ghost btn-sm" onClick={bersihkan}>
-                <X size={15} /> Hapus filter
+                <X size={14} /> Clear
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* ----------------------------- ringkasan ----------------------------- */}
+      {/* totals */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
-        <RingkasKecil
-          label="Pemasukan"
-          nilai={ringkas.masuk}
-          warna="var(--success)"
-          Ikon={ArrowDownLeft}
-        />
-        <RingkasKecil
-          label="Pengeluaran"
-          nilai={ringkas.keluar}
-          warna="var(--danger)"
-          Ikon={ArrowUpRight}
-          catatan={ringkas.admin > 0 ? `+${rp(ringkas.admin)} admin` : undefined}
-        />
-        <RingkasKecil
-          label="Selisih"
+        <Tile label="Income" nilai={ringkas.masuk} warna="var(--success)" Ikon={ArrowDownLeft} />
+        <Tile label="Expenses" nilai={ringkas.keluar} warna="var(--danger)" Ikon={ArrowUpRight} />
+        <Tile
+          label="Net"
           nilai={ringkas.masuk - ringkas.keluar}
           warna="var(--accent)"
           Ikon={ArrowLeftRight}
@@ -278,34 +248,28 @@ export default function HalamanTransaksi() {
         </div>
       )}
 
-      {/* ------------------------------- daftar ------------------------------- */}
       <Card besar pad={false}>
         {loading ? (
           <div className="p-5 space-y-2">
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-14 w-full" />
+              <Skeleton key={i} className="h-13 w-full" style={{ height: 52 }} />
             ))}
           </div>
         ) : items.length === 0 ? (
           <Kosong
-            ikon={<Receipt size={24} />}
-            judul="Tidak ada transaksi"
-            isi={
-              adaFilter
-                ? "Coba ubah filter atau rentang tanggalnya."
-                : "Belum ada transaksi pada rentang tanggal ini."
-            }
+            ikon={<Receipt size={22} />}
+            judul="No transactions"
             aksi={
               adaFilter ? (
                 <button className="btn btn-ghost btn-sm" onClick={bersihkan}>
-                  Hapus filter
+                  Clear filters
                 </button>
               ) : (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => setForm({ buka: true, awal: null })}
                 >
-                  <Plus size={16} /> Catat sekarang
+                  <Plus size={15} /> Add one
                 </button>
               )
             }
@@ -317,23 +281,23 @@ export default function HalamanTransaksi() {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th style={{ width: 120 }}>Tanggal</th>
-                    <th>Keterangan</th>
-                    <th style={{ width: 150 }}>Dompet</th>
-                    <th style={{ width: 150, textAlign: "right" }}>Nominal</th>
-                    <th style={{ width: 96 }} />
+                    <th style={{ width: 110 }}>Date</th>
+                    <th>Details</th>
+                    <th style={{ width: 170 }}>Wallet</th>
+                    <th style={{ width: 150, textAlign: "right" }}>Amount</th>
+                    <th style={{ width: 84 }} />
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((t) => (
                     <tr key={t.id}>
-                      <td className="muted whitespace-nowrap text-[13px]">
+                      <td className="muted whitespace-nowrap text-[12.5px]">
                         {labelTanggal(t.tanggal)}
                       </td>
                       <td>
                         <div className="flex items-center gap-2.5">
                           <span
-                            className="w-2 h-2 rounded-full shrink-0"
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{
                               background:
                                 t.tipe === "Transfer"
@@ -348,14 +312,14 @@ export default function HalamanTransaksi() {
                               {t.kategori || "Transfer"}
                             </p>
                             {t.catatan && (
-                              <p className="text-[12px] muted truncate max-w-[280px]">
+                              <p className="text-[11.5px] muted truncate max-w-[280px]">
                                 {t.catatan}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="text-[13px] text-2">
+                      <td className="text-[12.5px] text-2">
                         {t.tipe === "Transfer"
                           ? `${t.wallet} → ${t.walletTujuan}`
                           : t.wallet}
@@ -376,27 +340,27 @@ export default function HalamanTransaksi() {
                           {rp(t.jumlah)}
                         </span>
                         {t.biaya_admin > 0 && (
-                          <span className="block text-[10.5px] muted">
-                            +{rp(t.biaya_admin)} admin
+                          <span className="block text-[10px] muted">
+                            +{rp(t.biaya_admin)} fee
                           </span>
                         )}
                       </td>
                       <td>
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-0.5">
                           <button
                             className="btn btn-ghost btn-icon btn-sm"
-                            title="Ubah"
+                            title="Edit"
                             onClick={() => setForm({ buka: true, awal: t })}
                           >
-                            <Pencil size={14} />
+                            <Pencil size={13} />
                           </button>
                           <button
                             className="btn btn-ghost btn-icon btn-sm"
-                            title="Hapus"
-                            onClick={() => setHapus(t)}
+                            title="Delete"
                             style={{ color: "var(--danger)" }}
+                            onClick={() => setHapus(t)}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -411,14 +375,14 @@ export default function HalamanTransaksi() {
               {items.map((t) => (
                 <div key={t.id} className="flex items-center gap-3 p-3.5">
                   <span
-                    className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0"
+                    className="grid place-items-center w-8 h-8 rounded-[9px] shrink-0"
                     style={{
                       background:
                         t.tipe === "Transfer"
-                          ? "color-mix(in srgb, var(--info) 13%, transparent)"
+                          ? "color-mix(in srgb, var(--info) 11%, transparent)"
                           : t.tipe === "Pemasukan"
-                            ? "color-mix(in srgb, var(--success) 13%, transparent)"
-                            : "color-mix(in srgb, var(--danger) 13%, transparent)",
+                            ? "color-mix(in srgb, var(--success) 11%, transparent)"
+                            : "color-mix(in srgb, var(--danger) 11%, transparent)",
                       color:
                         t.tipe === "Transfer"
                           ? "var(--info)"
@@ -428,19 +392,19 @@ export default function HalamanTransaksi() {
                     }}
                   >
                     {t.tipe === "Transfer" ? (
-                      <ArrowLeftRight size={16} />
+                      <ArrowLeftRight size={15} />
                     ) : t.tipe === "Pemasukan" ? (
-                      <ArrowDownLeft size={16} />
+                      <ArrowDownLeft size={15} />
                     ) : (
-                      <ArrowUpRight size={16} />
+                      <ArrowUpRight size={15} />
                     )}
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-medium truncate">
+                    <p className="text-[13px] font-medium truncate">
                       {t.kategori || "Transfer"}
                     </p>
-                    <p className="text-[11.5px] muted truncate">
+                    <p className="text-[11px] muted truncate">
                       {labelTanggal(t.tanggal)} ·{" "}
                       {t.tipe === "Transfer"
                         ? `${t.wallet} → ${t.walletTujuan}`
@@ -450,7 +414,7 @@ export default function HalamanTransaksi() {
 
                   <div className="text-right shrink-0">
                     <p
-                      className="num font-semibold text-[13.5px]"
+                      className="num font-semibold text-[13px]"
                       style={{
                         color:
                           t.tipe === "Pemasukan"
@@ -463,19 +427,19 @@ export default function HalamanTransaksi() {
                       {t.tipe === "Pemasukan" ? "+" : t.tipe === "Pengeluaran" ? "−" : ""}
                       {rp(t.jumlah)}
                     </p>
-                    <div className="flex items-center justify-end gap-1 mt-1">
+                    <div className="flex items-center justify-end gap-0.5 mt-0.5">
                       <button
                         className="btn btn-ghost btn-icon btn-sm"
                         onClick={() => setForm({ buka: true, awal: t })}
                       >
-                        <Pencil size={13} />
+                        <Pencil size={12} />
                       </button>
                       <button
                         className="btn btn-ghost btn-icon btn-sm"
                         onClick={() => setHapus(t)}
                         style={{ color: "var(--danger)" }}
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
@@ -486,11 +450,10 @@ export default function HalamanTransaksi() {
         )}
       </Card>
 
-      {/* ------------------------------- modal ------------------------------- */}
       <Modal
         buka={form.buka}
         onTutup={() => setForm({ buka: false, awal: null })}
-        judul={form.awal ? "Ubah transaksi" : "Catat transaksi"}
+        judul={form.awal ? "Edit transaction" : "New transaction"}
         lebar={620}
       >
         {bootstrap && (
@@ -507,33 +470,26 @@ export default function HalamanTransaksi() {
       <Modal
         buka={!!hapus}
         onTutup={() => setHapus(null)}
-        judul="Hapus transaksi?"
-        sub="Tindakan ini tidak bisa dibatalkan."
-        lebar={420}
+        judul="Delete transaction?"
+        sub="This cannot be undone."
+        lebar={400}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setHapus(null)}>
-              Batal
+              Cancel
             </button>
-            <button
-              className="btn btn-danger"
-              onClick={konfirmasiHapus}
-              disabled={menghapus}
-            >
-              {menghapus ? "Menghapus…" : "Ya, hapus"}
+            <button className="btn btn-danger" onClick={konfirmasiHapus} disabled={menghapus}>
+              {menghapus ? "Deleting…" : "Delete"}
             </button>
           </>
         }
       >
         {hapus && (
-          <div
-            className="rounded-xl p-4 text-[13.5px]"
-            style={{ background: "var(--surface-2)" }}
-          >
+          <div className="rounded-xl p-3.5 text-[13px]" style={{ background: "var(--surface-2)" }}>
             <p className="font-semibold">
               {hapus.kategori || "Transfer"} — {rp(hapus.jumlah)}
             </p>
-            <p className="muted mt-1">
+            <p className="muted mt-0.5">
               {labelTanggal(hapus.tanggal)}
               {hapus.catatan ? ` · ${hapus.catatan}` : ""}
             </p>
@@ -544,34 +500,31 @@ export default function HalamanTransaksi() {
   );
 }
 
-function RingkasKecil({
+function Tile({
   label,
   nilai,
   warna,
   Ikon,
-  catatan,
 }: {
   label: string;
   nilai: number;
   warna: string;
   Ikon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  catatan?: string;
 }) {
   return (
     <div className="card card-pad">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-1.5 mb-2">
         <span style={{ color: warna }}>
-          <Ikon size={15} strokeWidth={2.5} />
+          <Ikon size={14} strokeWidth={2.5} />
         </span>
-        <span className="text-[12px] font-medium muted truncate">{label}</span>
+        <span className="text-[11.5px] font-medium muted truncate">{label}</span>
       </div>
       <p
-        className="num text-[15px] sm:text-[17px] font-semibold title leading-none truncate"
+        className="num text-[14px] sm:text-[16px] font-semibold title leading-none truncate"
         style={{ color: warna }}
       >
         {rp(nilai)}
       </p>
-      {catatan && <p className="text-[10.5px] muted mt-1.5">{catatan}</p>}
     </div>
   );
 }

@@ -1,15 +1,15 @@
 export const NAMA_BULAN = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 export const NAMA_BULAN_PENDEK = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-export const NAMA_HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-export const NAMA_HARI_PENDEK = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+export const NAMA_HARI = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const NAMA_HARI_PENDEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** 1234567 -> "Rp 1.234.567" */
 export function rp(n: number | string | null | undefined, opsi?: { tanpaRp?: boolean }): string {
@@ -25,14 +25,14 @@ export function rp(n: number | string | null | undefined, opsi?: { tanpaRp?: boo
   return (negatif ? "-" : "") + prefix + out;
 }
 
-/** 1234567 -> "1,2 jt" — untuk sumbu grafik & ruang sempit */
+/** 1234567 -> "1.2M" — for chart axes and tight spaces */
 export function rpSingkat(n: number | null | undefined): string {
   const v = Number(n) || 0;
   const abs = Math.abs(v);
   const tanda = v < 0 ? "-" : "";
-  if (abs >= 1_000_000_000) return tanda + (abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1).replace(".", ",") + " M";
-  if (abs >= 1_000_000) return tanda + (abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1).replace(".", ",") + " jt";
-  if (abs >= 1_000) return tanda + Math.round(abs / 1_000) + " rb";
+  if (abs >= 1_000_000_000) return tanda + (abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1) + "B";
+  if (abs >= 1_000_000) return tanda + (abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1) + "M";
+  if (abs >= 1_000) return tanda + Math.round(abs / 1_000) + "K";
   return tanda + String(Math.round(abs));
 }
 
@@ -89,18 +89,18 @@ export function labelTanggal(tanggal: string, opsi?: { denganHari?: boolean }): 
 
 export function labelTanggalRelatif(tanggal: string): string {
   const hariIni = tanggalHariIni();
-  if (tanggal === hariIni) return "Hari ini";
+  if (tanggal === hariIni) return "Today";
   const [y, m, d] = hariIni.split("-").map(Number);
   const kemarin = new Date(y, m - 1, d - 1);
   const kemarinStr = `${kemarin.getFullYear()}-${String(kemarin.getMonth() + 1).padStart(2, "0")}-${String(kemarin.getDate()).padStart(2, "0")}`;
-  if (tanggal === kemarinStr) return "Kemarin";
+  if (tanggal === kemarinStr) return "Yesterday";
   return labelTanggal(tanggal);
 }
 
 export const LEVEL_LABEL: Record<string, string> = {
-  aman: "Aman",
+  aman: "Safe",
   warning: "Warning",
-  kritis: "Kritis",
+  kritis: "Critical",
   over: "Over",
 };
 
@@ -112,13 +112,13 @@ export const LEVEL_WARNA: Record<string, string> = {
 };
 
 export const JENIS_DOMPET_LABEL: Record<string, string> = {
-  tunai: "Tunai",
+  tunai: "Cash",
   bank: "Bank",
   ewallet: "E-Wallet",
-  piutang: "Piutang",
-  hutang: "Hutang",
-  investasi: "Investasi",
-  lainnya: "Lainnya",
+  piutang: "Receivable",
+  hutang: "Payable",
+  investasi: "Investment",
+  lainnya: "Other",
 };
 
 export function inisial(nama: string): string {
@@ -137,5 +137,5 @@ export function formatSaatKetik(teks: string): string {
 
 export function persen(n: number | null | undefined, desimal = 1): string {
   const v = Number(n) || 0;
-  return `${v.toFixed(desimal).replace(".", ",")}%`;
+  return `${v.toFixed(desimal)}%`;
 }

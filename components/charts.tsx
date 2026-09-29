@@ -100,14 +100,14 @@ export function TrenChart({
         />
         <Bar
           dataKey="masuk"
-          name="Pemasukan"
+          name="Income"
           fill={WARNA.masuk}
           radius={[5, 5, 0, 0]}
           maxBarSize={26}
         />
         <Bar
           dataKey="keluar"
-          name="Pengeluaran"
+          name="Expense"
           fill={WARNA.keluar}
           radius={[5, 5, 0, 0]}
           maxBarSize={26}
@@ -142,7 +142,7 @@ export function TrenGaris({
         <Line
           type="monotone"
           dataKey="masuk"
-          name="Pemasukan"
+          name="Income"
           stroke={WARNA.masuk}
           strokeWidth={2.4}
           dot={{ r: 3, strokeWidth: 0, fill: WARNA.masuk }}
@@ -151,7 +151,7 @@ export function TrenGaris({
         <Line
           type="monotone"
           dataKey="keluar"
-          name="Pengeluaran"
+          name="Expense"
           stroke={WARNA.keluar}
           strokeWidth={2.4}
           dot={{ r: 3, strokeWidth: 0, fill: WARNA.keluar }}

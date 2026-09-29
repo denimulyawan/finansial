@@ -85,33 +85,23 @@ export function Modal({
     <>
       <div className="overlay" onClick={onTutup} />
       <div className="modal" style={{ width: `min(${lebar}px, calc(100vw - 32px))` }}>
-        <div
-          className="flex items-start justify-between gap-4 p-5 pb-4 sticky top-0 z-10"
-          style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
-        >
+        <div className="modal-head">
           <div className="min-w-0">
-            <h2 className="text-[16.5px] font-semibold title">{judul}</h2>
-            {sub && <p className="text-[13px] muted mt-0.5">{sub}</p>}
+            <h2 className="text-[16px] font-semibold title">{judul}</h2>
+            {sub && <p className="text-[12.5px] muted mt-0.5">{sub}</p>}
           </div>
           <button
             onClick={onTutup}
             className="btn btn-ghost btn-icon btn-sm shrink-0"
-            aria-label="Tutup"
+            aria-label="Close"
           >
-            <X size={17} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="p-5">{children}</div>
+        <div className="modal-body">{children}</div>
 
-        {footer && (
-          <div
-            className="flex items-center justify-end gap-2 p-4 px-5 sticky bottom-0"
-            style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}
-          >
-            {footer}
-          </div>
-        )}
+        {footer && <div className="modal-foot">{footer}</div>}
       </div>
     </>
   );
@@ -260,13 +250,13 @@ export function Galat({
     >
       <div className="flex-1 text-[13.5px] leading-relaxed">
         <p className="font-semibold mb-0.5" style={{ color: "var(--danger)" }}>
-          Gagal memuat data
+          Could not load data
         </p>
         <p className="text-2">{pesan}</p>
       </div>
       {onCobaLagi && (
         <button onClick={onCobaLagi} className="btn btn-ghost btn-sm shrink-0">
-          Coba lagi
+          Try again
         </button>
       )}
     </div>

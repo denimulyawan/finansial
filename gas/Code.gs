@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  *  FINANSIAL — Backend Google Apps Script
  *  Database: Google Sheets  |  Frontend: Next.js di Vercel
@@ -58,26 +58,26 @@ var BATAS_OVER = 100;
 
 var RANK_LEVEL = { aman: 0, warning: 1, kritis: 2, over: 3 };
 var IKON_LEVEL = { warning: '\u26A0\uFE0F', kritis: '\uD83D\uDFE0', over: '\uD83D\uDD34' };
-var LABEL_LEVEL = { aman: 'Aman', warning: 'Warning', kritis: 'Kritis', over: 'Over' };
+var LABEL_LEVEL = { aman: 'Safe', warning: 'Warning', kritis: 'Critical', over: 'Over' };
 
 var KATEGORI_AWAL = [
-  // Pemasukan
-  { id: 'gaji',         nama: 'Gaji',         tipe: 'Pemasukan',   warna: '#10b981', ikon: 'Wallet' },
-  { id: 'thr',          nama: 'THR',          tipe: 'Pemasukan',   warna: '#22c55e', ikon: 'Gift' },
-  { id: 'bonus',        nama: 'Bonus',        tipe: 'Pemasukan',   warna: '#34d399', ikon: 'TrendingUp' },
-  { id: 'lain_masuk',   nama: 'Lainnya',      tipe: 'Pemasukan',   warna: '#6ee7b7', ikon: 'Plus' },
-  // Pengeluaran
-  { id: 'makan',        nama: 'Makan',        tipe: 'Pengeluaran', warna: '#f97316', ikon: 'UtensilsCrossed' },
-  { id: 'transportasi', nama: 'Transportasi', tipe: 'Pengeluaran', warna: '#3b82f6', ikon: 'Car' },
-  { id: 'tagihan',      nama: 'Tagihan',      tipe: 'Pengeluaran', warna: '#8b5cf6', ikon: 'Receipt' },
-  { id: 'hiburan',      nama: 'Hiburan',      tipe: 'Pengeluaran', warna: '#ec4899', ikon: 'Gamepad2' },
-  { id: 'pendidikan',   nama: 'Pendidikan',   tipe: 'Pengeluaran', warna: '#06b6d4', ikon: 'GraduationCap' },
-  { id: 'orang_tua',    nama: 'Orang Tua',    tipe: 'Pengeluaran', warna: '#a855f7', ikon: 'Heart' },
-  { id: 'belanja',      nama: 'Belanja',      tipe: 'Pengeluaran', warna: '#eab308', ikon: 'ShoppingCart' },
-  { id: 'kesehatan',    nama: 'Kesehatan',    tipe: 'Pengeluaran', warna: '#ef4444', ikon: 'Stethoscope' },
-  { id: 'lainnya',      nama: 'Lainnya',      tipe: 'Pengeluaran', warna: '#64748b', ikon: 'MoreHorizontal' },
-  // Sistem — untuk biaya admin transfer, tidak muncul di pilihan pengeluaran
-  { id: KAT_BIAYA_ADMIN, nama: 'Biaya Admin', tipe: 'Pengeluaran', warna: '#94a3b8', ikon: 'Landmark', sistem: 1 }
+  // Income
+  { id: 'gaji',         nama: 'Salary',        tipe: 'Pemasukan',   warna: '#10b981', ikon: 'Wallet' },
+  { id: 'thr',          nama: 'THR',           tipe: 'Pemasukan',   warna: '#22c55e', ikon: 'Gift' },
+  { id: 'bonus',        nama: 'Bonus',         tipe: 'Pemasukan',   warna: '#34d399', ikon: 'TrendingUp' },
+  { id: 'lain_masuk',   nama: 'Other',         tipe: 'Pemasukan',   warna: '#6ee7b7', ikon: 'Plus' },
+  // Expense
+  { id: 'makan',        nama: 'Food',          tipe: 'Pengeluaran', warna: '#f97316', ikon: 'UtensilsCrossed' },
+  { id: 'transportasi', nama: 'Transport',     tipe: 'Pengeluaran', warna: '#3b82f6', ikon: 'Car' },
+  { id: 'tagihan',      nama: 'Bills',         tipe: 'Pengeluaran', warna: '#8b5cf6', ikon: 'Receipt' },
+  { id: 'hiburan',      nama: 'Entertainment', tipe: 'Pengeluaran', warna: '#ec4899', ikon: 'Gamepad2' },
+  { id: 'pendidikan',   nama: 'Education',     tipe: 'Pengeluaran', warna: '#06b6d4', ikon: 'GraduationCap' },
+  { id: 'orang_tua',    nama: 'Parents',       tipe: 'Pengeluaran', warna: '#a855f7', ikon: 'Heart' },
+  { id: 'belanja',      nama: 'Shopping',      tipe: 'Pengeluaran', warna: '#eab308', ikon: 'ShoppingCart' },
+  { id: 'kesehatan',    nama: 'Health',        tipe: 'Pengeluaran', warna: '#ef4444', ikon: 'Stethoscope' },
+  { id: 'lainnya',      nama: 'Other',         tipe: 'Pengeluaran', warna: '#64748b', ikon: 'MoreHorizontal' },
+  // System — admin fees on transfers, never shown in the expense picker
+  { id: KAT_BIAYA_ADMIN, nama: 'Admin Fee',    tipe: 'Pengeluaran', warna: '#94a3b8', ikon: 'Landmark', sistem: 1 }
 ];
 
 var DOMPET_AWAL = [
@@ -104,7 +104,7 @@ function doPost(e) {
 
     var who = verifyToken_(body.token || payload.token || '');
     if (!who) {
-      return json_({ ok: false, error: 'UNAUTHORIZED', message: 'Sesi tidak valid atau kedaluwarsa. Silakan masuk ulang.' });
+      return json_({ ok: false, error: 'UNAUTHORIZED', message: 'Session is invalid or expired. Please sign in again.' });
     }
 
     var user = findUser_(who.email);
@@ -112,11 +112,11 @@ function doPost(e) {
       return json_({
         ok: false,
         error: 'FORBIDDEN',
-        message: 'Email ' + who.email + ' belum terdaftar. Minta admin menambahkan email ini di menu Pengaturan.'
+        message: 'Email ' + who.email + ' is not registered. Ask the admin to add this email in Settings.'
       });
     }
     if (String(user.status || '').toLowerCase() !== 'aktif') {
-      return json_({ ok: false, error: 'FORBIDDEN', message: 'Akun ini sedang tidak aktif.' });
+      return json_({ ok: false, error: 'FORBIDDEN', message: 'This account is inactive.' });
     }
 
     touchLogin_(user, who);
@@ -162,7 +162,7 @@ function route_(action, p, user, who) {
     case 'telegram.status': return telegramStatus_();
     case 'telegram.test':   return { sent: telegram_('\u2705 <b>Finansial</b>\nNotifikasi Telegram berhasil disambungkan.') };
     default:
-      throw new Error('Aksi tidak dikenal: ' + action);
+      throw new Error('Unknown action: ' + action);
   }
 }
 
@@ -183,9 +183,9 @@ function setup() {
   var email = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
   if (email) upsertUser_({ email: email, nama: '', peran: 'admin', status: 'aktif' });
 
-  var pesan = 'Setup selesai. Pemilik: ' + email;
+  var pesan = 'Setup complete. Owner: ' + email;
   if (diperbaiki.length) {
-    pesan += ' | Header diperbaiki: ' + diperbaiki.join(', ');
+    pesan += ' | Headers repaired: ' + diperbaiki.join(', ');
   }
   return pesan;
 }
@@ -326,7 +326,7 @@ function izinkanSemua() {
     { muteHttpExceptions: true }
   );
 
-  return 'Izin lengkap. Lanjutkan: Deploy -> Manage deployments -> Edit -> ' +
+  return 'Permissions granted. Next: Deploy -> Manage deployments -> Edit -> ' +
          'Version: New version -> Deploy.';
 }
 
@@ -529,37 +529,37 @@ function txSave_(p, user) {
   var t = p.transaction || p;
   var tipe = String(t.tipe || '');
   if (['Pemasukan', 'Pengeluaran', 'Transfer'].indexOf(tipe) === -1) {
-    throw new Error('Tipe transaksi tidak valid.');
+    throw new Error('Invalid transaction type.');
   }
 
   var jumlah = num_(t.jumlah);
-  if (!(jumlah > 0)) throw new Error('Nominal harus lebih dari 0.');
+  if (!(jumlah > 0)) throw new Error('Amount must be greater than 0.');
 
   var fee = tipe === 'Transfer' ? num_(t.biaya_admin) : 0;
   if (fee < 0) fee = 0;
 
   var walletId = String(t.wallet_id || '');
-  if (!walletId) throw new Error('Dompet belum dipilih.');
-  if (!findWallet_(walletId)) throw new Error('Dompet tidak ditemukan.');
+  if (!walletId) throw new Error('No wallet selected.');
+  if (!findWallet_(walletId)) throw new Error('Wallet not found.');
 
   var walletTujuan = '';
   if (tipe === 'Transfer') {
     walletTujuan = String(t.wallet_tujuan_id || '');
-    if (!walletTujuan) throw new Error('Dompet tujuan belum dipilih.');
-    if (walletTujuan === walletId) throw new Error('Dompet asal dan tujuan tidak boleh sama.');
-    if (!findWallet_(walletTujuan)) throw new Error('Dompet tujuan tidak ditemukan.');
+    if (!walletTujuan) throw new Error('No destination wallet selected.');
+    if (walletTujuan === walletId) throw new Error('Source and destination must be different.');
+    if (!findWallet_(walletTujuan)) throw new Error('Destination wallet not found.');
   }
 
   var categoryId = String(t.category_id || '');
   if (tipe === 'Pengeluaran' || tipe === 'Pemasukan') {
-    if (!categoryId) throw new Error('Kategori belum dipilih.');
-    if (!findCategory_(categoryId)) throw new Error('Kategori tidak ditemukan.');
+    if (!categoryId) throw new Error('No category selected.');
+    if (!findCategory_(categoryId)) throw new Error('Category not found.');
   } else {
     categoryId = '';
   }
 
   var tanggal = String(t.tanggal || '') || todayStr_();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new Error('Format tanggal harus YYYY-MM-DD.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new Error('Date must be in YYYY-MM-DD format.');
 
   var rec = {
     id: t.id ? String(t.id) : uid_(),
@@ -594,7 +594,7 @@ function txSave_(p, user) {
 
 function txDelete_(p) {
   var id = String(p.id || '');
-  if (!id) throw new Error('ID transaksi kosong.');
+  if (!id) throw new Error('Missing transaction ID.');
 
   var row = findRowById_(SH.TX, id);
   /* sudah tidak ada berarti kemungkinan pengiriman ulang; anggap berhasil */
@@ -661,7 +661,7 @@ function walletList_() {
 function walletSave_(p) {
   var w = p.wallet || p;
   var nama = String(w.nama || '').trim();
-  if (!nama) throw new Error('Nama dompet wajib diisi.');
+  if (!nama) throw new Error('Wallet name is required.');
 
   var jenis = String(w.jenis || 'tunai');
   if (['tunai', 'bank', 'ewallet', 'piutang', 'hutang', 'investasi', 'lainnya'].indexOf(jenis) === -1) {
@@ -692,17 +692,17 @@ function walletSave_(p) {
 
 function walletArchive_(p) {
   var id = String(p.id || '');
-  if (!id) throw new Error('ID dompet kosong.');
+  if (!id) throw new Error('Missing wallet ID.');
   var w = findWallet_(id);
-  if (!w) throw new Error('Dompet tidak ditemukan.');
+  if (!w) throw new Error('Wallet not found.');
 
   var aktif = num_(p.aktif) ? 1 : 0;
   if (!aktif) {
     var txs = semuaTx_();
     var saldo = computeBalances_([w], txs)[w.id] || 0;
     if (Math.abs(saldo) > 0.5 && !p.paksa) {
-      throw new Error('Saldo dompet ini masih ' + formatRp_(saldo) +
-        '. Kosongkan dulu (transfer ke dompet lain), atau arsipkan dengan paksa.');
+      throw new Error('This wallet still holds ' + formatRp_(saldo) +
+        '. Transfer it out first, or archive anyway.');
     }
   }
   updateByKey_(SH.WALLETS, 'id', id, { aktif: aktif });
@@ -714,10 +714,10 @@ function walletArchive_(p) {
 function categorySave_(p) {
   var c = p.category || p;
   var nama = String(c.nama || '').trim();
-  if (!nama) throw new Error('Nama kategori wajib diisi.');
+  if (!nama) throw new Error('Category name is required.');
 
   var tipe = String(c.tipe || 'Pengeluaran');
-  if (['Pemasukan', 'Pengeluaran'].indexOf(tipe) === -1) throw new Error('Tipe kategori tidak valid.');
+  if (['Pemasukan', 'Pengeluaran'].indexOf(tipe) === -1) throw new Error('Invalid category type.');
 
   var id = c.id ? String(c.id) : slug_(nama) + '_' + Math.random().toString(36).slice(2, 6);
   var existing = c.id ? findRowById_(SH.CATS, id) : null;
@@ -749,10 +749,10 @@ function categorySave_(p) {
 
 function categoryDelete_(p) {
   var id = String(p.id || '');
-  if (!id) throw new Error('ID kategori kosong.');
+  if (!id) throw new Error('Missing category ID.');
   var c = findCategory_(id);
-  if (!c) throw new Error('Kategori tidak ditemukan.');
-  if (num_(c.sistem) === 1) throw new Error('Kategori sistem tidak bisa dihapus.');
+  if (!c) throw new Error('Category not found.');
+  if (num_(c.sistem) === 1) throw new Error('System categories cannot be deleted.');
 
   var dipakai = readAll_(SH.TX).some(function (t) { return t.category_id === id; });
   if (dipakai) {
@@ -789,7 +789,7 @@ function budgetPage_(p) {
 
 function budgetSaveAll_(p) {
   var bulan = String(p.bulan || '');
-  if (!/^\d{4}-\d{2}$/.test(bulan)) throw new Error('Format bulan harus YYYY-MM.');
+  if (!/^\d{4}-\d{2}$/.test(bulan)) throw new Error('Month must be in YYYY-MM format.');
 
   var items = p.items || [];
   var lama = readAll_(SH.BUDGET).filter(function (b) { return b.bulan === bulan; });
@@ -814,10 +814,10 @@ function budgetCopy_(p) {
   var dari = String(p.dari || '');
   var ke = String(p.ke || '');
   if (!/^\d{4}-\d{2}$/.test(dari) || !/^\d{4}-\d{2}$/.test(ke)) {
-    throw new Error('Format bulan harus YYYY-MM.');
+    throw new Error('Month must be in YYYY-MM format.');
   }
   var sumber = readAll_(SH.BUDGET).filter(function (b) { return b.bulan === dari; });
-  if (!sumber.length) throw new Error('Bulan ' + dari + ' belum punya budget.');
+  if (!sumber.length) throw new Error('No budget found for ' + dari + '.');
 
   var target = readAll_(SH.BUDGET).filter(function (b) { return b.bulan === ke; });
   target.forEach(function (b) { deleteByKey_(SH.BUDGET, 'id', b.id); });
@@ -951,7 +951,7 @@ function report_(p) {
 function usersSave_(p, me) {
   var u = p.user || p;
   var email = String(u.email || '').trim().toLowerCase();
-  if (!email || email.indexOf('@') === -1) throw new Error('Email tidak valid.');
+  if (!email || email.indexOf('@') === -1) throw new Error('Invalid email.');
 
   var peran = String(u.peran || 'admin') === 'lihat' ? 'lihat' : 'admin';
   var status = String(u.status || 'aktif').toLowerCase() === 'nonaktif' ? 'nonaktif' : 'aktif';
@@ -959,7 +959,7 @@ function usersSave_(p, me) {
   var existing = findUser_(email);
   if (existing) {
     if (existing.email === me.email && status === 'nonaktif') {
-      throw new Error('Tidak bisa menonaktifkan akun sendiri.');
+      throw new Error('You cannot deactivate your own account.');
     }
     updateByKey_(SH.USERS, 'email', email, {
       nama: String(u.nama || ''),
@@ -974,12 +974,12 @@ function usersSave_(p, me) {
 
 function usersDelete_(p, me) {
   var email = String(p.email || '').toLowerCase();
-  if (!email) throw new Error('Email kosong.');
-  if (email === me.email) throw new Error('Tidak bisa menghapus akun sendiri.');
+  if (!email) throw new Error('Missing email.');
+  if (email === me.email) throw new Error('You cannot remove your own account.');
   var row = findUser_(email);
-  if (!row) throw new Error('Pengguna tidak ditemukan.');
+  if (!row) throw new Error('User not found.');
   var semua = readAll_(SH.USERS).filter(function (u) { return String(u.status).toLowerCase() === 'aktif'; });
-  if (semua.length <= 1) throw new Error('Minimal harus ada satu pengguna aktif.');
+  if (semua.length <= 1) throw new Error('At least one active user is required.');
   deleteByKey_(SH.USERS, 'email', email);
   return { deleted: email };
 }
@@ -1230,7 +1230,7 @@ function cekBudgetDanKirim_(bulan) {
     if (status.total) {
       kandidat.push({
         categoryId: KAT_TOTAL,
-        nama: 'Total Bulanan',
+        nama: 'Monthly total',
         batas: status.total.batas,
         terpakai: status.total.terpakai,
         sisa: status.total.sisa,
@@ -1268,16 +1268,16 @@ function susunPesan_(it, bulan) {
   var label = LABEL_LEVEL[it.level] || it.level;
   var baris = [];
 
-  baris.push(ikon + ' <b>Budget ' + escapeHtml_(it.nama) + '</b> \u2014 ' + label);
-  baris.push('Bulan ' + labelBulan_(bulan));
+  baris.push(ikon + ' <b>' + escapeHtml_(it.nama) + ' budget</b> \u2014 ' + label);
+  baris.push('Month: ' + labelBulan_(bulan));
   baris.push('');
-  baris.push('Terpakai: <b>' + it.persen + '%</b>');
-  baris.push(formatRp_(it.terpakai) + ' dari ' + formatRp_(it.batas));
+  baris.push('Used: <b>' + it.persen + '%</b>');
+  baris.push(formatRp_(it.terpakai) + ' of ' + formatRp_(it.batas));
 
   if (it.level === 'over') {
-    baris.push('\u26A0\uFE0F Lewat ' + formatRp_(Math.abs(it.sisa)));
+    baris.push('Over by ' + formatRp_(Math.abs(it.sisa)));
   } else {
-    baris.push('Sisa: ' + formatRp_(it.sisa));
+    baris.push('Left: ' + formatRp_(it.sisa));
   }
 
   return baris.join('\n');
@@ -1307,7 +1307,7 @@ function telegram_(text) {
 
 function ss_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Script ini harus terikat pada Google Sheet (Ekstensi -> Apps Script).');
+  if (!ss) throw new Error('This script must be bound to a Google Sheet (Extensions -> Apps Script).');
   return ss;
 }
 
@@ -1479,6 +1479,40 @@ function seedKategori_() {
       aktif: 1
     });
   });
+}
+
+/**
+ * Jalankan SEKALI kalau kategori bawaanmu masih memakai nama bahasa Indonesia.
+ * Hanya mengganti nama; kategori buatanmu sendiri tidak disentuh.
+ */
+function ubahKategoriKeInggris() {
+  var peta = {
+    gaji: 'Salary',
+    thr: 'THR',
+    bonus: 'Bonus',
+    lain_masuk: 'Other',
+    makan: 'Food',
+    transportasi: 'Transport',
+    tagihan: 'Bills',
+    hiburan: 'Entertainment',
+    pendidikan: 'Education',
+    orang_tua: 'Parents',
+    belanja: 'Shopping',
+    kesehatan: 'Health',
+    lainnya: 'Other',
+    biaya_admin: 'Admin Fee'
+  };
+
+  var diubah = [];
+  Object.keys(peta).forEach(function (id) {
+    var c = findCategory_(id);
+    if (c && c.nama !== peta[id]) {
+      updateByKey_(SH.CATS, 'id', id, { nama: peta[id] });
+      diubah.push(c.nama + ' -> ' + peta[id]);
+    }
+  });
+
+  return diubah.length ? 'Renamed: ' + diubah.join(', ') : 'All categories are already in English.';
 }
 
 function seedDompet_() {
