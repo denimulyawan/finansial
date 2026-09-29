@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  *  FINANSIAL — Backend Google Apps Script
  *  Database: Google Sheets  |  Frontend: Next.js di Vercel
