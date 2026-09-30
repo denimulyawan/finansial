@@ -737,7 +737,16 @@ function walletDelete_(p) {
       'Archive it, or delete it together with those transactions.');
   }
 
-  terkait.forEach(function (t) { deleteByKey_(SH.TX, 'id', t.id); });
+  /* Hapus dari baris paling bawah dulu supaya nomor baris di atasnya tetap
+     sah. Membaca sheet sekali lalu menghapus sekaligus jauh lebih cepat
+     daripada memanggil deleteByKey_ berulang kali, yang membaca ulang
+     seluruh sheet untuk setiap transaksi. */
+  var shTx = sheet_(SH.TX);
+  terkait
+    .map(function (t) { return t._row; })
+    .sort(function (a, b) { return b - a; })
+    .forEach(function (r) { shTx.deleteRow(r); });
+
   deleteByKey_(SH.WALLETS, 'id', id);
   bersihkanCache_();
 
