@@ -64,11 +64,22 @@ export default function HalamanDompet() {
   const [arsip, setArsip] = useState<WalletSaldo | null>(null);
   const [hapus, setHapus] = useState<WalletSaldo | null>(null);
   const [menghapus, setMenghapus] = useState(false);
+  const [teksKonfirmasi, setTeksKonfirmasi] = useState("");
 
   const wallets = data?.wallets || [];
   const aktif = wallets.filter((w) => w.aktif === 1);
   const nonaktif = wallets.filter((w) => w.aktif !== 1);
   const totalSaldo = aktif.reduce((a, w) => a + w.saldo, 0);
+
+  /* Dompet yang punya transaksi wajib diketik namanya dulu, supaya tidak
+     ada data yang hilang karena salah pencet. */
+  const perluKetik = (hapus?.jmlTransaksi || 0) > 0;
+  const cocokHapus = !perluKetik || teksKonfirmasi.trim() === hapus?.nama;
+
+  function bukaHapus(w: WalletSaldo) {
+    setTeksKonfirmasi("");
+    setHapus(w);
+  }
 
   async function arsipkan(w: WalletSaldo, paksa: boolean) {
     try {
@@ -188,7 +199,7 @@ export default function HalamanDompet() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     className="btn btn-ghost btn-icon btn-sm"
-                    onClick={() => setHapus(w)}
+                    onClick={() => bukaHapus(w)}
                     title="Delete permanently"
                     style={{ color: "var(--danger)" }}
                   >
@@ -235,7 +246,7 @@ export default function HalamanDompet() {
                   className="btn btn-ghost btn-icon btn-sm shrink-0"
                   title="Delete permanently"
                   style={{ color: "var(--danger)" }}
-                  onClick={() => setHapus(w)}
+                  onClick={() => bukaHapus(w)}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -287,19 +298,28 @@ export default function HalamanDompet() {
 
       <Modal
         buka={!!hapus}
-        onTutup={() => setHapus(null)}
+        onTutup={() => {
+          setHapus(null);
+          setTeksKonfirmasi("");
+        }}
         judul="Delete wallet?"
         sub="This cannot be undone."
         lebar={420}
         footer={
           <>
-            <button className="btn btn-ghost" onClick={() => setHapus(null)}>
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                setHapus(null);
+                setTeksKonfirmasi("");
+              }}
+            >
               Cancel
             </button>
             <button
               className="btn btn-danger"
               onClick={hapusPermanen}
-              disabled={menghapus}
+              disabled={menghapus || !cocokHapus}
             >
               {menghapus ? "Deleting…" : "Delete"}
             </button>
@@ -354,6 +374,21 @@ export default function HalamanDompet() {
                   move it to another wallet first.
                 </p>
               )
+            )}
+
+            {perluKetik && (
+              <div>
+                <label className="label">
+                  Type <b>{hapus.nama}</b> to confirm
+                </label>
+                <input
+                  className="input"
+                  value={teksKonfirmasi}
+                  onChange={(e) => setTeksKonfirmasi(e.target.value)}
+                  placeholder={hapus.nama}
+                  autoComplete="off"
+                />
+              </div>
             )}
           </div>
         )}
