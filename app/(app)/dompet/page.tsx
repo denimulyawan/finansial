@@ -89,7 +89,10 @@ export default function HalamanDompet() {
     if (!hapus) return;
     setMenghapus(true);
     try {
-      await api("wallet.delete", { id: hapus.id });
+      await api("wallet.delete", {
+        id: hapus.id,
+        paksa: hapus.jmlTransaksi > 0,
+      });
       toast.sukses("Wallet deleted.");
       setHapus(null);
       picuBootstrap();
@@ -183,16 +186,14 @@ export default function HalamanDompet() {
                   Start {rp(w.saldo_awal)} · {w.jmlTransaksi}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
-                  {w.jmlTransaksi === 0 && (
-                    <button
-                      className="btn btn-ghost btn-icon btn-sm"
-                      onClick={() => setHapus(w)}
-                      title="Delete permanently"
-                      style={{ color: "var(--danger)" }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
+                  <button
+                    className="btn btn-ghost btn-icon btn-sm"
+                    onClick={() => setHapus(w)}
+                    title="Delete permanently"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => arsipkan(w, false)}
@@ -229,6 +230,14 @@ export default function HalamanDompet() {
                   onClick={() => arsipkan(w, true)}
                 >
                   <ArchiveRestore size={14} />
+                </button>
+                <button
+                  className="btn btn-ghost btn-icon btn-sm shrink-0"
+                  title="Delete permanently"
+                  style={{ color: "var(--danger)" }}
+                  onClick={() => setHapus(w)}
+                >
+                  <Trash2 size={14} />
                 </button>
               </div>
             ))}
@@ -298,10 +307,24 @@ export default function HalamanDompet() {
         }
       >
         {hapus && (
-          <p className="text-[13px] text-2 leading-relaxed">
-            <b>{hapus.nama}</b> will be removed from the spreadsheet. Only
-            wallets with no transactions can be deleted.
-          </p>
+          <div className="space-y-2.5 text-[13px] text-2 leading-relaxed">
+            <p>
+              <b>{hapus.nama}</b> will be removed from the spreadsheet.
+            </p>
+            {hapus.jmlTransaksi > 0 && (
+              <p
+                className="rounded-xl p-3"
+                style={{
+                  background: "color-mix(in srgb, var(--danger) 7%, #fff)",
+                  color: "var(--danger)",
+                }}
+              >
+                {hapus.jmlTransaksi} transaction
+                {hapus.jmlTransaksi === 1 ? "" : "s"} linked to this wallet
+                will be deleted too, and the balances will change.
+              </p>
+            )}
+          </div>
         )}
       </Modal>
     </>

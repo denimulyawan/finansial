@@ -712,10 +712,13 @@ function walletArchive_(p) {
 /**
  * Hapus dompet secara permanen.
  *
- * Hanya boleh kalau dompet itu belum pernah dipakai di transaksi mana pun.
- * Kalau dipaksa, transaksi lama akan menunjuk dompet yang sudah tidak ada
- * dan seluruh saldo serta laporan jadi salah. Untuk dompet yang sudah
- * dipakai, pakai arsip.
+ * Kalau dompet itu masih dipakai transaksi, semua transaksi tersebut ikut
+ * dihapus. Ini perlu supaya tidak ada transaksi yang menunjuk dompet yang
+ * sudah tidak ada — kalau itu terjadi, saldo dan laporan jadi salah tanpa
+ * pesan error apa pun.
+ *
+ * Tanpa paksa, dompet yang masih dipakai ditolak supaya tidak terhapus
+ * karena salah pencet.
  */
 function walletDelete_(p) {
   var id = String(p.id || '');
@@ -725,16 +728,20 @@ function walletDelete_(p) {
   /* sudah tidak ada berarti kemungkinan pengiriman ulang; anggap berhasil */
   if (!w) return { deleted: id, sudahTidakAda: true };
 
-  var dipakai = semuaTx_().some(function (t) {
+  var terkait = semuaTx_().filter(function (t) {
     return String(t.wallet_id) === id || String(t.wallet_tujuan_id) === id;
   });
-  if (dipakai) {
-    throw new Error('This wallet is used by transactions. Archive it instead.');
+
+  if (terkait.length && !p.paksa) {
+    throw new Error('This wallet is used by ' + terkait.length + ' transaction(s). ' +
+      'Archive it, or delete it together with those transactions.');
   }
 
+  terkait.forEach(function (t) { deleteByKey_(SH.TX, 'id', t.id); });
   deleteByKey_(SH.WALLETS, 'id', id);
   bersihkanCache_();
-  return { deleted: id };
+
+  return { deleted: id, transaksiTerhapus: terkait.length };
 }
 
 /* ============================== AKSI: KATEGORI ============================ */
