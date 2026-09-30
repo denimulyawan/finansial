@@ -307,22 +307,53 @@ export default function HalamanDompet() {
         }
       >
         {hapus && (
-          <div className="space-y-2.5 text-[13px] text-2 leading-relaxed">
+          <div className="space-y-3 text-[13px] text-2 leading-relaxed">
             <p>
               <b>{hapus.nama}</b> will be removed from the spreadsheet.
             </p>
-            {hapus.jmlTransaksi > 0 && (
-              <p
-                className="rounded-xl p-3"
-                style={{
-                  background: "color-mix(in srgb, var(--danger) 7%, #fff)",
-                  color: "var(--danger)",
-                }}
-              >
-                {hapus.jmlTransaksi} transaction
-                {hapus.jmlTransaksi === 1 ? "" : "s"} linked to this wallet
-                will be deleted too, and the balances will change.
+
+            <div
+              className="rounded-xl p-3.5 space-y-2"
+              style={{ background: "var(--surface-2)" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="muted">Current balance</span>
+                <span
+                  className="num font-semibold"
+                  style={{ color: hapus.saldo < 0 ? "var(--danger)" : undefined }}
+                >
+                  {rp(hapus.saldo)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="muted">Transactions</span>
+                <span className="num font-semibold">{hapus.jmlTransaksi}</span>
+              </div>
+            </div>
+
+            <p
+              className="rounded-xl p-3 font-medium"
+              style={{
+                background: "color-mix(in srgb, var(--warning) 9%, #fff)",
+                color: "var(--warning)",
+              }}
+            >
+              Your total balance will drop by {rp(hapus.saldo)}.
+            </p>
+
+            {hapus.jmlTransaksi > 0 ? (
+              <p className="muted">
+                Its {hapus.jmlTransaksi} transaction
+                {hapus.jmlTransaksi === 1 ? "" : "s"} will be deleted too, so
+                reports for those months will change.
               </p>
+            ) : (
+              Math.abs(hapus.saldo) > 0.5 && (
+                <p className="muted">
+                  This wallet has no transactions. If that money still exists,
+                  move it to another wallet first.
+                </p>
+              )
             )}
           </div>
         )}
