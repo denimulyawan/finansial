@@ -138,7 +138,33 @@ finansial/
 6. Klik Create, lalu salin **Client ID**. Ini yang jadi
    `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
-### Bagian 3 — Jalankan di komputer
+### Bagian 3 — Service account (ini yang membuat aplikasi cepat)
+
+Aplikasi membaca Google Sheets **langsung dari Vercel**, bukan lewat Apps
+Script. Tanpa langkah ini aplikasi tetap jalan memakai Apps Script sebagai
+cadangan, tetapi setiap permintaan makan 5-8 detik.
+
+1. Buka Google Cloud Console pada project yang sama dengan Client ID.
+2. Menu **APIs & Services → Library** → cari **Google Sheets API** →
+   **Enable**.
+3. Menu **IAM & Admin → Service Accounts** → **Create service account**.
+   - Name: `finansial-bot`
+   - Role: kosongkan saja, tidak diperlukan
+   - **Done**
+4. Klik service account itu → tab **Keys** → **Add key → Create new key** →
+   **JSON** → Create. Berkas JSON akan terunduh.
+
+   **Jangan commit berkas ini ke GitHub.**
+5. Buka berkas JSON itu dan catat nilai **`client_email`**, bentuknya seperti
+   `finansial-bot@nama-project.iam.gserviceaccount.com`.
+6. Buka Google Sheet-mu → **Share** → tempel email service account tadi →
+   beri akses **Editor** → Send.
+
+   Tanpa langkah ini backend tidak bisa membaca sheet sama sekali.
+7. Ambil **SHEET_ID** dari URL spreadsheet:
+   `docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
+
+### Bagian 4 — Jalankan di komputer
 
 ```bash
 cp .env.local.example .env.local
@@ -147,30 +173,48 @@ cp .env.local.example .env.local
 Isi `.env.local`:
 
 ```
-NEXT_PUBLIC_GAS_URL=https://script.google.com/macros/s/XXXX/exec
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=XXXX.apps.googleusercontent.com
+SHEET_ID=xxxxxxxxxxxxxxxx
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account", ...}
+OWNER_EMAIL=emailkamu@gmail.com
 ```
 
-Lalu:
+Untuk `GOOGLE_SERVICE_ACCOUNT_JSON`, tempel **seluruh isi berkas JSON** dalam
+satu baris. Versi base64-nya juga diterima.
 
 ```bash
 npm install
-npm run dev
+npm run build
+npm run start
 ```
 
 Buka <http://localhost:3000>.
 
-### Bagian 4 — Deploy ke Vercel
+> `npm run dev` juga bisa, tetapi jauh lebih lambat karena setiap halaman
+> dikompilasi saat pertama dibuka. Untuk pemakaian sehari-hari pakai
+> `build` lalu `start`.
 
-1. Push repo ini ke GitHub.
-2. Buka <https://vercel.com/new>, import repo-nya.
-3. Di **Environment Variables**, tambahkan:
-   - `NEXT_PUBLIC_GAS_URL`
+### Bagian 5 — Deploy ke Vercel
+
+1. Buka <https://vercel.com/new>, import repo ini.
+2. Di **Environment Variables**, tambahkan semua isi `.env.local`:
    - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-4. Deploy.
-5. Setelah dapat domain Vercel, **kembali ke Google Cloud Console** dan tambahkan
-   domain itu ke **Authorized JavaScript origins**. Tanpa ini, tombol masuk
-   Google akan ditolak.
+   - `SHEET_ID`
+   - `GOOGLE_SERVICE_ACCOUNT_JSON`
+   - `OWNER_EMAIL` (opsional)
+   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (opsional)
+   - `NEXT_PUBLIC_GAS_URL` (opsional, hanya cadangan)
+3. Deploy.
+4. Setelah dapat domain Vercel, **kembali ke Google Cloud Console** →
+   **Google Auth Platform → Clients → Client ID kamu → Authorized JavaScript
+   origins** → tambahkan `https://domain-mu.vercel.app`.
+
+**Cara memastikan backend cepat sudah aktif:** buka
+`https://domain-mu.vercel.app/api/rpc` di browser.
+
+- `"backend":"vercel"` → sudah cepat
+- `"backend":"apps-script"` → masih mode cadangan, periksa `SHEET_ID` dan
+  `GOOGLE_SERVICE_ACCOUNT_JSON`
 
 ---
 
@@ -184,14 +228,13 @@ Buka <http://localhost:3000>.
    - Kirim pesan apa saja di channel,
    - buka `https://api.telegram.org/bot<TOKEN>/getUpdates`,
    - cari nilai `chat.id`, biasanya diawali `-100`.
-5. Di editor Apps Script, buka **Project Settings → Script properties**, lalu
-   tambahkan:
+5. Tambahkan keduanya sebagai **Environment Variables** di Vercel:
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_CHAT_ID`
 
    **Jangan** menulis token di dalam kode, dan jangan pernah commit ke GitHub.
-6. Jalankan `setTelegram` dari editor, atau langsung uji lewat tombol
-   **Kirim pesan uji** di halaman **Pengaturan → Notifikasi**.
+6. Deploy ulang, lalu uji lewat tombol **Send test** di halaman
+   **Settings → Alerts**.
 
 ---
 

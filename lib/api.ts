@@ -1,4 +1,6 @@
-const GAS_URL = process.env.NEXT_PUBLIC_GAS_URL || "";
+/* Backend ada di domain yang sama, jadi tidak ada CORS dan tidak ada
+   pengalihan 302 seperti pada Apps Script. */
+const ENDPOINT = "/api/rpc";
 const TOKEN_KEY = "finansial.token";
 const USER_KEY = "finansial.user";
 const THEME_KEY = "finansial.theme";
@@ -13,11 +15,13 @@ export class ApiError extends Error {
 }
 
 export function gasUrl(): string {
-  return GAS_URL;
+  return ENDPOINT;
 }
 
 export function adaKonfigurasi(): boolean {
-  return !!GAS_URL && !GAS_URL.includes("XXXX");
+  /* yang wajib ada sekarang hanya Client ID untuk login;
+     backend-nya ada di domain ini sendiri */
+  return !!GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.includes("XXXX");
 }
 
 /**
@@ -169,7 +173,7 @@ async function sekali<T>(
 
   let res: Response;
   try {
-    res = await fetch(GAS_URL, {
+    res = await fetch(ENDPOINT, {
       method: "POST",
       // text/plain menghindari preflight CORS — Apps Script tidak menangani OPTIONS
       headers: { "Content-Type": "text/plain;charset=utf-8" },

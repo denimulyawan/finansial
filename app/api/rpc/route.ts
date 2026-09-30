@@ -1,0 +1,161 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { adaKredensial } from "@/lib/sheets";
+import { jalankan, penggunaTerdaftar, sesiBaru, siapkanSheet } from "@/lib/backend";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
+ * Satu-satunya pintu masuk backend.
+ *
+ * Frontend memanggil /api/rpc pada domain yang sama, jadi tidak ada CORS dan
+ * tidak ada pengalihan 302 seperti pada Apps Script. Satu permintaan selesai
+ * dalam ratusan milidetik, bukan 5-8 detik.
+ *
+ * Selama GOOGLE_SERVICE_ACCOUNT_JSON belum diisi, permintaan diteruskan ke
+ * Apps Script supaya aplikasinya tetap jalan.
+ */
+
+function balas(data: unknown, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function gagal(error: string, message: string, status = 200) {
+  return balas({ ok: false, error, message }, status);
+}
+
+/* ============================ VERIFIKASI TOKEN ============================ */
+
+type Who = { email: string; nama: string; sampai: number };
+
+const cacheToken = new Map<string, Who>();
+const MASA_TOKEN = 25 * 60 * 1000;
+
+async function verifikasi(idToken: string): Promise<Who | null> {
+  if (!idToken) return null;
+
+  /* dipakai potongan akhir token sebagai kunci supaya token tidak disimpan utuh */
+  const kunci = idToken.slice(-48);
+  const tersimpan = cacheToken.get(kunci);
+  if (tersimpan && Date.now() < tersimpan.sampai) return tersimpan;
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+      { cache: "no-store" }
+    );
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+
+  const p = (await res.json()) as {
+    email?: string;
+    email_verified?: string;
+    aud?: string;
+    name?: string;
+  };
+  if (!p.email || p.email_verified !== "true") return null;
+
+  const aud = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  if (aud && p.aud !== aud) return null;
+
+  const who: Who = {
+    email: String(p.email).toLowerCase(),
+    nama: p.name || "",
+    sampai: Date.now() + MASA_TOKEN,
+  };
+  cacheToken.set(kunci, who);
+  return who;
+}
+
+/* ============================ CADANGAN: GAS ============================== */
+
+async function teruskanKeGas(body: unknown) {
+  const url = process.env.NEXT_PUBLIC_GAS_URL;
+  if (!url) {
+    return gagal(
+      "BELUM_DIKONFIGURASI",
+      "Backend belum disiapkan. Isi GOOGLE_SERVICE_ACCOUNT_JSON dan SHEET_ID, atau NEXT_PUBLIC_GAS_URL sebagai cadangan."
+    );
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body),
+      redirect: "follow",
+      cache: "no-store",
+    });
+    const teks = await res.text();
+    if (!res.ok || !teks.trim().startsWith("{")) {
+      return gagal("SEMENTARA", `Apps Script membalas kode ${res.status}.`);
+    }
+    return new NextResponse(teks, {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  } catch {
+    return gagal("JARINGAN", "Tidak bisa menghubungi server.");
+  }
+}
+
+/* ================================ HANDLER ================================ */
+
+export async function POST(req: NextRequest) {
+  let body: { action?: string; payload?: Record<string, unknown>; token?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return gagal("BAD_REQUEST", "Body bukan JSON yang sah.");
+  }
+
+  const action = String(body.action || "");
+  const payload = body.payload || {};
+
+  if (action === "ping") {
+    return balas({
+      ok: true,
+      data: { pong: true, backend: adaKredensial() ? "vercel" : "apps-script" },
+    });
+  }
+
+  if (!adaKredensial()) return teruskanKeGas(body);
+
+  const who = await verifikasi(String(body.token || ""));
+  if (!who) {
+    return gagal(
+      "UNAUTHORIZED",
+      "Session is invalid or expired. Please sign in again."
+    );
+  }
+
+  try {
+    await siapkanSheet();
+
+    const terdaftar = await penggunaTerdaftar(who.email);
+    if (!terdaftar.ok) return gagal("FORBIDDEN", terdaftar.pesan || "Not allowed.");
+
+    const data = await jalankan(action, payload, sesiBaru(who.email));
+    return balas({ ok: true, data });
+  } catch (e) {
+    const pesan = e instanceof Error ? e.message : String(e);
+    return gagal("ERROR", pesan);
+  }
+}
+
+export async function GET() {
+  return balas({
+    ok: true,
+    data: {
+      service: "Finansial API",
+      backend: adaKredensial() ? "vercel" : "apps-script",
+      petunjuk: "Kirim permintaan dengan metode POST.",
+    },
+  });
+}
