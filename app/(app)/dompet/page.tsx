@@ -12,6 +12,7 @@ import {
   PiggyBank,
   Plus,
   Smartphone,
+  Trash2,
   Wallet as WalletIcon,
 } from "lucide-react";
 import { ApiError, api, idBaru } from "@/lib/api";
@@ -61,6 +62,8 @@ export default function HalamanDompet() {
     awal: null,
   });
   const [arsip, setArsip] = useState<WalletSaldo | null>(null);
+  const [hapus, setHapus] = useState<WalletSaldo | null>(null);
+  const [menghapus, setMenghapus] = useState(false);
 
   const wallets = data?.wallets || [];
   const aktif = wallets.filter((w) => w.aktif === 1);
@@ -79,6 +82,21 @@ export default function HalamanDompet() {
         return;
       }
       toast.gagal(e instanceof ApiError ? e.message : "Could not update wallet.");
+    }
+  }
+
+  async function hapusPermanen() {
+    if (!hapus) return;
+    setMenghapus(true);
+    try {
+      await api("wallet.delete", { id: hapus.id });
+      toast.sukses("Wallet deleted.");
+      setHapus(null);
+      picuBootstrap();
+    } catch (e) {
+      toast.gagal(e instanceof ApiError ? e.message : "Could not delete wallet.");
+    } finally {
+      setMenghapus(false);
     }
   }
 
@@ -160,17 +178,29 @@ export default function HalamanDompet() {
                 {rp(w.saldo)}
               </p>
 
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-[11px] muted">
+              <div className="flex items-center justify-between gap-2 mt-3">
+                <span className="text-[11px] muted truncate">
                   Start {rp(w.saldo_awal)} · {w.jmlTransaksi}
                 </span>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => arsipkan(w, false)}
-                  title="Archive"
-                >
-                  <Archive size={12} /> Archive
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {w.jmlTransaksi === 0 && (
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      onClick={() => setHapus(w)}
+                      title="Delete permanently"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => arsipkan(w, false)}
+                    title="Archive"
+                  >
+                    <Archive size={12} /> Archive
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -242,6 +272,35 @@ export default function HalamanDompet() {
           <p className="text-[13px] text-2 leading-relaxed">
             <b>{arsip.nama}</b> still holds <b>{rp(arsip.saldo)}</b>. Transfer it
             out first to keep your records accurate.
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        buka={!!hapus}
+        onTutup={() => setHapus(null)}
+        judul="Delete wallet?"
+        sub="This cannot be undone."
+        lebar={420}
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setHapus(null)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={hapusPermanen}
+              disabled={menghapus}
+            >
+              {menghapus ? "Deleting…" : "Delete"}
+            </button>
+          </>
+        }
+      >
+        {hapus && (
+          <p className="text-[13px] text-2 leading-relaxed">
+            <b>{hapus.nama}</b> will be removed from the spreadsheet. Only
+            wallets with no transactions can be deleted.
           </p>
         )}
       </Modal>
