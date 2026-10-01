@@ -4,6 +4,9 @@ import { jalankan, penggunaTerdaftar, sesiBaru, siapkanSheet } from "@/lib/backe
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/* Google Sheets kadang lambat saat pertama diakses. Beri ruang 60 detik
+   supaya tidak muncul "Application error" di Vercel. */
+export const maxDuration = 60;
 
 /**
  * Satu-satunya pintu masuk backend.

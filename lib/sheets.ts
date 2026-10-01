@@ -63,7 +63,26 @@ async function accessToken(): Promise<string> {
   return hasil.token;
 }
 
-async function panggil(
+class GalatSheets extends Error {
+  status: number;
+  constructor(status: number, pesan: string) {
+    super(pesan);
+    this.status = status;
+    this.name = "GalatSheets";
+  }
+}
+
+/** 429 dan 5xx biasanya gangguan sesaat, layak dicoba ulang. */
+function sementara(e: unknown): boolean {
+  if (e instanceof GalatSheets) return e.status === 429 || e.status >= 500;
+  return true; /* kegagalan jaringan */
+}
+
+function jeda(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function panggilSekali(
   jalur: string,
   opsi?: { method?: string; body?: unknown }
 ): Promise<unknown> {
@@ -80,11 +99,42 @@ async function panggil(
 
   const teks = await res.text();
   if (!res.ok) {
-    throw new Error(
+    throw new GalatSheets(
+      res.status,
       `Sheets API menolak (${res.status}): ${teks.slice(0, 300)}`
     );
   }
   return teks ? JSON.parse(teks) : {};
+}
+
+/**
+ * Hanya pembacaan yang dicoba ulang.
+ *
+ * Mengulang penulisan berbahaya: kalau penulisan sebenarnya berhasil tetapi
+ * balasannya hilang, pengulangan akan menambah atau menghapus baris dua kali.
+ * Penulisan yang gagal ditangani di lapisan atas, tempat ID transaksi sudah
+ * dibuat lebih dulu sehingga pengiriman ulang hanya memperbarui baris yang ada.
+ */
+async function panggil(
+  jalur: string,
+  opsi?: { method?: string; body?: unknown }
+): Promise<unknown> {
+  const metode = opsi?.method || "GET";
+  if (metode !== "GET") return panggilSekali(jalur, opsi);
+
+  let terakhir: unknown = null;
+  for (let coba = 1; coba <= 3; coba++) {
+    try {
+      return await panggilSekali(jalur, opsi);
+    } catch (e) {
+      if (!sementara(e)) throw e;
+      terakhir = e;
+      if (coba < 3) await jeda(200 * coba);
+    }
+  }
+  throw terakhir instanceof Error
+    ? terakhir
+    : new Error("Sheets API tidak merespons.");
 }
 
 /* ================================== BACA ================================== */

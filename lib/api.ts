@@ -223,7 +223,7 @@ async function sekali<T>(
  * Cache dibuang setiap kali ada data yang disimpan (lihat picuMuatUlang),
  * jadi angkanya tidak pernah basi setelah kamu mencatat sesuatu.
  */
-const TTL_MS = 20000;
+const TTL_MS = 30000;
 const cacheHasil = new Map<string, { waktu: number; data: unknown }>();
 const sedangJalan = new Map<string, Promise<unknown>>();
 
