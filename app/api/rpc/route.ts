@@ -155,12 +155,29 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  /* Berguna untuk memeriksa konfigurasi: memberi tahu variabel mana yang
+     belum terbaca, tanpa pernah menampilkan isinya. */
+  const sa = process.env.GOOGLE_SERVICE_ACCOUNT_JSON || "";
+  const sid = process.env.SHEET_ID || "";
+  const gas = process.env.GAS_URL || process.env.NEXT_PUBLIC_GAS_URL || "";
+
+  const isi = (nilai: string) =>
+    nilai ? `terisi, ${nilai.length} karakter` : "KOSONG";
+
   return balas({
     ok: true,
     data: {
       service: "Finansial API",
       backend: adaKredensial() ? "vercel" : "apps-script",
       petunjuk: "Kirim permintaan dengan metode POST.",
+      pemeriksaan: {
+        SHEET_ID: isi(sid),
+        GOOGLE_SERVICE_ACCOUNT_JSON: isi(sa),
+        GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "terisi" : "KOSONG",
+        GAS_URL: gas ? "terisi" : "KOSONG",
+        TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ? "terisi" : "KOSONG",
+        TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID ? "terisi" : "KOSONG",
+      },
     },
   });
 }
