@@ -163,6 +163,22 @@ export async function bacaRange(range: string): Promise<unknown[][]> {
   return hasil.values || [];
 }
 
+/**
+ * Baca beberapa rentang sekaligus dalam SATU permintaan.
+ *
+ * Kuota Google Sheets hanya 60 pembacaan per menit. Tanpa ini, satu
+ * permintaan aplikasi memakai 5-8 pembacaan, sehingga sekitar 8 klik
+ * sudah menghabiskan kuota.
+ */
+export async function bacaBanyak(ranges: string[]): Promise<unknown[][][]> {
+  if (!ranges.length) return [];
+  const q = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join("&");
+  const hasil = (await panggil(
+    `/${SHEET_ID}/values:batchGet?${q}&majorDimension=ROWS`
+  )) as { valueRanges?: { values?: unknown[][] }[] };
+  return (hasil.valueRanges || []).map((v) => v.values || []);
+}
+
 type InfoSheet = { sheetId: number; title: string };
 
 let infoCache: { daftar: InfoSheet[]; sampai: number } | null = null;
@@ -204,6 +220,20 @@ export async function tambahBaris(
     `/${SHEET_ID}/values/${encodeURIComponent(range)}:append` +
       `?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
     { method: "POST", body: { values: [nilai] } }
+  );
+}
+
+/** Tambah banyak baris dalam SATU permintaan tulis. */
+export async function tambahBanyak(
+  nama: string,
+  baris: unknown[][]
+): Promise<void> {
+  if (!baris.length) return;
+  const range = `${nama}!A1`;
+  await panggil(
+    `/${SHEET_ID}/values/${encodeURIComponent(range)}:append` +
+      `?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { method: "POST", body: { values: baris } }
   );
 }
 

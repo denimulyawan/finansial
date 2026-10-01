@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adaKredensial, ujiSheets } from "@/lib/sheets";
-import { jalankan, penggunaTerdaftar, sesiBaru, siapkanSheet } from "@/lib/backend";
+import {
+  jalankan,
+  muatSemua,
+  penggunaTerdaftar,
+  sesiBaru,
+  siapkanJikaPerlu,
+} from "@/lib/backend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +34,18 @@ function balas(data: unknown, status = 200) {
 
 function gagal(error: string, message: string, status = 200) {
   return balas({ ok: false, error, message }, status);
+}
+
+/** Kuota Google Sheets hanya 60 pembacaan per menit. Beri pesan yang jelas. */
+function pesanRamah(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  if (m.includes("429") || m.includes("RESOURCE_EXHAUSTED")) {
+    return (
+      "Google sedang membatasi permintaan (kuota per menit habis). " +
+      "Tunggu sekitar satu menit lalu coba lagi."
+    );
+  }
+  return m;
 }
 
 /* ============================ VERIFIKASI TOKEN ============================ */
@@ -141,16 +159,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await siapkanSheet();
+    const sesi = sesiBaru(who.email);
 
-    const terdaftar = await penggunaTerdaftar(who.email);
+    /* Pastikan sheet ada, lalu ambil SELURUH isinya dalam satu permintaan.
+       Setelah itu semua pembacaan lain gratis. Kuota Google Sheets hanya
+       60 pembacaan per menit, jadi jumlah permintaan harus ditekan. */
+    await siapkanJikaPerlu(sesi);
+    await muatSemua(sesi);
+
+    const terdaftar = await penggunaTerdaftar(sesi, who.email);
     if (!terdaftar.ok) return gagal("FORBIDDEN", terdaftar.pesan || "Not allowed.");
 
-    const data = await jalankan(action, payload, sesiBaru(who.email));
+    const data = await jalankan(action, payload, sesi);
     return balas({ ok: true, data });
   } catch (e) {
-    const pesan = e instanceof Error ? e.message : String(e);
-    return gagal("ERROR", pesan);
+    return gagal("ERROR", pesanRamah(e));
   }
 }
 

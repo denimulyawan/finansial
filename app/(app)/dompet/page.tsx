@@ -65,6 +65,9 @@ export default function HalamanDompet() {
   const [hapus, setHapus] = useState<WalletSaldo | null>(null);
   const [menghapus, setMenghapus] = useState(false);
   const [teksKonfirmasi, setTeksKonfirmasi] = useState("");
+  const [pilih, setPilih] = useState<string[]>([]);
+  const [hapusMassal, setHapusMassal] = useState(false);
+  const [teksMassal, setTeksMassal] = useState("");
 
   const wallets = data?.wallets || [];
   const aktif = wallets.filter((w) => w.aktif === 1);
@@ -79,6 +82,38 @@ export default function HalamanDompet() {
   function bukaHapus(w: WalletSaldo) {
     setTeksKonfirmasi("");
     setHapus(w);
+  }
+
+  const terpilih = aktif.filter((w) => pilih.includes(w.id));
+  const transaksiTerpilih = terpilih.reduce((a, w) => a + w.jmlTransaksi, 0);
+  const adaTransaksiTerpilih = transaksiTerpilih > 0;
+
+  function togglePilih(id: string) {
+    setPilih((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  }
+
+  async function hapusTerpilih() {
+    if (!pilih.length) return;
+    setMenghapus(true);
+    try {
+      const hasil = await api<{ dihapus: number; transaksiTerhapus: number }>(
+        "wallet.hapusBanyak",
+        { ids: pilih, paksa: true }
+      );
+      toast.sukses(
+        `${hasil.dihapus} wallet(s) deleted` +
+          (hasil.transaksiTerhapus
+            ? `, ${hasil.transaksiTerhapus} transaction(s) went with them.`
+            : ".")
+      );
+      setPilih([]);
+      setHapusMassal(false);
+      picuBootstrap();
+    } catch (e) {
+      toast.gagal(e instanceof ApiError ? e.message : "Could not delete.");
+    } finally {
+      setMenghapus(false);
+    }
   }
 
   async function arsipkan(w: WalletSaldo, paksa: boolean) {
@@ -163,6 +198,14 @@ export default function HalamanDompet() {
             <div key={w.id} className="card card-lg card-pad anim-up">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2.5 min-w-0">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 shrink-0 cursor-pointer"
+                    style={{ accentColor: "var(--accent)" }}
+                    checked={pilih.includes(w.id)}
+                    onChange={() => togglePilih(w.id)}
+                    aria-label={`Select ${w.nama}`}
+                  />
                   <span
                     className="grid place-items-center w-9 h-9 rounded-[10px] shrink-0"
                     style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
@@ -392,6 +435,103 @@ export default function HalamanDompet() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* bilah hapus massal */}
+      {pilih.length > 0 && (
+        <div
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl anim-up"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow)",
+          }}
+        >
+          <span className="text-[12.5px] text-2">{pilih.length} selected</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setPilih([])}>
+            Clear
+          </button>
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={() => {
+              setTeksMassal("");
+              setHapusMassal(true);
+            }}
+          >
+            <Trash2 size={13} /> Delete
+          </button>
+        </div>
+      )}
+
+      <Modal
+        buka={hapusMassal}
+        onTutup={() => setHapusMassal(false)}
+        judul={`Delete ${pilih.length} wallet${pilih.length === 1 ? "" : "s"}?`}
+        sub="This cannot be undone."
+        lebar={460}
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setHapusMassal(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={hapusTerpilih}
+              disabled={
+                menghapus ||
+                (adaTransaksiTerpilih && teksMassal.trim().toUpperCase() !== "DELETE")
+              }
+            >
+              {menghapus ? "Deleting…" : "Delete"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-[13px] text-2 leading-relaxed">
+          <div
+            className="rounded-xl p-3.5 space-y-2 max-h-[220px] overflow-y-auto"
+            style={{ background: "var(--surface-2)" }}
+          >
+            {terpilih.map((w) => (
+              <div key={w.id} className="flex items-center justify-between gap-3">
+                <span className="truncate">{w.nama}</span>
+                <span className="num font-semibold shrink-0">{rp(w.saldo)}</span>
+              </div>
+            ))}
+          </div>
+
+          {adaTransaksiTerpilih ? (
+            <>
+              <p
+                className="rounded-xl p-3"
+                style={{
+                  background: "color-mix(in srgb, var(--danger) 7%, #fff)",
+                  color: "var(--danger)",
+                }}
+              >
+                {transaksiTerpilih} linked transaction
+                {transaksiTerpilih === 1 ? "" : "s"} will be deleted too, so
+                reports for those months will change.
+              </p>
+              <div>
+                <label className="label">
+                  Type <b>DELETE</b> to confirm
+                </label>
+                <input
+                  className="input"
+                  value={teksMassal}
+                  onChange={(e) => setTeksMassal(e.target.value)}
+                  placeholder="DELETE"
+                  autoComplete="off"
+                />
+              </div>
+            </>
+          ) : (
+            <p className="muted">
+              None of these wallets have transactions.
+            </p>
+          )}
+        </div>
       </Modal>
     </>
   );

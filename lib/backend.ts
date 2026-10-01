@@ -1,10 +1,12 @@
 import {
+  bacaBanyak,
   bacaRange,
+  buatSheet,
   hapusBaris,
+  idSheet,
+  tambahBanyak,
   tambahBaris,
   tulisBaris,
-  buatSheet,
-  idSheet,
 } from "./sheets";
 
 /**
@@ -79,28 +81,14 @@ export function sesiBaru(email: string): Sesi {
   return { baca: new Map(), email };
 }
 
-/* Daftar pengguna jarang berubah, jadi disimpan sebentar di memori supaya
-   tidak perlu dibaca ulang pada setiap permintaan. */
-let cachePengguna: { daftar: Baris[]; sampai: number } | null = null;
-
-export function lupakanPengguna() {
-  cachePengguna = null;
-}
-
 export async function penggunaTerdaftar(
+  sesi: Sesi,
   email: string
 ): Promise<{ ok: boolean; pesan?: string }> {
-  const kini = Date.now();
-  if (!cachePengguna || kini > cachePengguna.sampai) {
-    const sesi = sesiBaru("");
-    cachePengguna = {
-      daftar: await bacaSemua(sesi, SH.USERS),
-      sampai: kini + 30_000,
-    };
-  }
-
+  /* dibaca dari sesi yang sudah dimuat, jadi tidak menambah permintaan */
+  const daftar = await bacaSemua(sesi, SH.USERS);
   const target = email.toLowerCase();
-  const u = cachePengguna.daftar.find(
+  const u = daftar.find(
     (x) => String(x.email).toLowerCase() === target
   );
 
@@ -215,13 +203,46 @@ function levelOf(persen: number): string {
 
 /* =============================== AKSES SHEET ============================== */
 
-export async function siapkanSheet(): Promise<void> {
+function barisKeObjek(values: unknown[][]): Baris[] {
+  if (!values.length) return [];
+  const head = values[0].map((h) => String(h));
+  const out: Baris[] = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    if (String(row.join("")) === "") continue;
+    const o: Baris = { _row: i + 1 };
+    for (let j = 0; j < head.length; j++) o[head[j]] = row[j];
+    out.push(o);
+  }
+  return out;
+}
+
+/**
+ * Ambil seluruh isi sheet dalam SATU permintaan, lalu simpan di sesi.
+ * Sesudah ini semua pembacaan lain gratis.
+ */
+export async function muatSemua(sesi: Sesi): Promise<void> {
+  const nama = Object.keys(HEADERS);
+  const hasil = await bacaBanyak(nama.map((n) => `${n}!A1:ZZ`));
+  nama.forEach((n, i) => sesi.baca.set(n, barisKeObjek(hasil[i] || [])));
+}
+
+/* Membuat sheet dan mengisi data awal hanya perlu diperiksa sesekali,
+   bukan pada setiap permintaan. */
+let siapSampai = 0;
+const MASA_SIAP = 10 * 60 * 1000;
+
+export async function siapkanJikaPerlu(sesi: Sesi): Promise<void> {
   for (const nama of Object.keys(HEADERS)) {
     await buatSheet(nama, HEADERS[nama]);
   }
-  await seedKategori();
-  await seedDompet();
-  await seedPemilik();
+
+  if (Date.now() < siapSampai) return;
+  siapSampai = Date.now() + MASA_SIAP;
+
+  await seedKategori(sesi);
+  await seedDompet(sesi);
+  await seedPemilik(sesi);
 }
 
 /** Baca seluruh isi sheet, disimpan selama satu permintaan saja. */
@@ -260,6 +281,37 @@ function barisDari(head: string[], obj: Baris): unknown[] {
 async function tambah(sesi: Sesi, nama: string, obj: Baris): Promise<void> {
   await tambahBaris(nama, barisDari(HEADERS[nama], obj));
   lupakan(sesi, nama);
+}
+
+/** Tambah banyak baris sekaligus - satu permintaan tulis, bukan satu per baris. */
+async function tambahSemua(
+  sesi: Sesi,
+  nama: string,
+  objs: Baris[]
+): Promise<void> {
+  if (!objs.length) return;
+  const head = HEADERS[nama];
+  await tambahBanyak(nama, objs.map((o) => barisDari(head, o)));
+  lupakan(sesi, nama);
+}
+
+/** Hapus banyak baris berdasarkan kuncinya - satu permintaan, bukan satu per baris. */
+async function hapusBanyak(
+  sesi: Sesi,
+  nama: string,
+  key: string,
+  values: unknown[]
+): Promise<number> {
+  if (!values.length) return 0;
+  const set = new Set(values.map(String));
+  const list = await bacaSemua(sesi, nama);
+  const baris = list
+    .filter((b) => set.has(String(b[key])))
+    .map((b) => Number(b._row));
+  if (!baris.length) return 0;
+  await hapusBaris(nama, baris);
+  lupakan(sesi, nama);
+  return baris.length;
 }
 
 async function ubah(
@@ -308,38 +360,38 @@ function cari(sesi: Sesi, nama: string, pred: (b: Baris) => boolean) {
 
 /* ================================== SEED ================================== */
 
-async function seedKategori() {
-  const sesi = sesiBaru("");
+async function seedKategori(sesi: Sesi) {
   const ada = await bacaSemua(sesi, SH.CATS);
   const dikenal = new Set(ada.map((c) => String(c.id)));
+  const baru: Baris[] = [];
   for (let i = 0; i < KATEGORI_AWAL.length; i++) {
     const c = KATEGORI_AWAL[i];
     if (dikenal.has(c.id)) continue;
-    await tambah(sesi, SH.CATS, {
+    baru.push({
       id: c.id, nama: c.nama, tipe: c.tipe, warna: c.warna, ikon: c.ikon,
       sistem: c.sistem || 0, urutan: i + 1, aktif: 1,
     });
   }
+  await tambahSemua(sesi, SH.CATS, baru);
 }
 
-async function seedDompet() {
-  const sesi = sesiBaru("");
+async function seedDompet(sesi: Sesi) {
   if ((await bacaSemua(sesi, SH.WALLETS)).length) return;
-  for (let i = 0; i < DOMPET_AWAL.length; i++) {
-    const w = DOMPET_AWAL[i];
-    await tambah(sesi, SH.WALLETS, {
+  await tambahSemua(
+    sesi,
+    SH.WALLETS,
+    DOMPET_AWAL.map((w, i) => ({
       id: w.id, nama: w.nama, jenis: w.jenis, saldo_awal: 0,
       urutan: i + 1, aktif: 1, catatan: "", created_at: sekarang(),
-    });
-  }
+    }))
+  );
 }
 
 /** Kalau daftar pengguna kosong, daftarkan OWNER_EMAIL supaya bisa masuk. */
-async function seedPemilik() {
+async function seedPemilik(sesi: Sesi) {
   const owner = (process.env.OWNER_EMAIL || "").trim().toLowerCase();
   if (!owner) return;
 
-  const sesi = sesiBaru("");
   const users = await bacaSemua(sesi, SH.USERS);
   if (users.length) return;
 
@@ -908,6 +960,37 @@ export async function jalankan(
       return { id, aktif };
     }
 
+    case "wallet.hapusBanyak": {
+      const ids = ((p.ids as string[]) || []).map(String);
+      if (!ids.length) throw new Error("No wallets selected.");
+
+      const wallets = await bacaSemua(sesi, SH.WALLETS);
+      const ada = wallets.filter((w) => ids.includes(String(w.id)));
+      if (!ada.length) return { dihapus: 0, transaksiTerhapus: 0 };
+
+      const txs = await semuaTx(sesi);
+      const terkait = txs.filter(
+        (t) =>
+          ids.includes(String(t.wallet_id)) ||
+          ids.includes(String(t.wallet_tujuan_id))
+      );
+
+      if (terkait.length && !p.paksa) {
+        throw new Error(
+          `${ada.length} wallet dan ${terkait.length} transaksi akan terhapus. ` +
+            "Centang paksa untuk melanjutkan."
+        );
+      }
+
+      /* Satu permintaan untuk semua baris transaksi, satu untuk semua dompet. */
+      await hapusBaris(SH.TX, terkait.map((t) => Number(t._row)));
+      lupakan(sesi, SH.TX);
+      await hapusBaris(SH.WALLETS, ada.map((w) => Number(w._row)));
+      lupakan(sesi, SH.WALLETS);
+
+      return { dihapus: ada.length, transaksiTerhapus: terkait.length };
+    }
+
     case "wallet.delete": {
       const id = String(p.id || "");
       if (!id) throw new Error("Missing wallet ID.");
@@ -1004,18 +1087,22 @@ export async function jalankan(
       const bulan = String(p.bulan || "");
       if (!/^\d{4}-\d{2}$/.test(bulan)) throw new Error("Month must be in YYYY-MM format.");
 
+      /* Satu permintaan untuk semua penghapusan, satu untuk semua penambahan.
+         Kuota tulis Google Sheets hanya 60 per menit. */
       const lama = (await bacaSemua(sesi, SH.BUDGET)).filter((b) => String(b.bulan) === bulan);
-      for (const b of lama) await hapus(sesi, SH.BUDGET, "id", String(b.id));
+      await hapusBanyak(sesi, SH.BUDGET, "id", lama.map((b) => String(b.id)));
 
       const items = (p.items as { category_id: string; jumlah: number }[]) || [];
+      const baru: Baris[] = [];
       for (const it of items) {
         const jumlah = num(it.jumlah);
         if (!(jumlah > 0)) continue;
-        await tambah(sesi, SH.BUDGET, {
+        baru.push({
           id: uid(), bulan, category_id: String(it.category_id),
           jumlah, updated_at: sekarang(),
         });
       }
+      await tambahSemua(sesi, SH.BUDGET, baru);
 
       return { bulan, status: await statusBudget(sesi, bulan) };
     }
@@ -1031,14 +1118,16 @@ export async function jalankan(
       if (!sumber.length) throw new Error(`No budget found for ${dari}.`);
 
       const target = (await bacaSemua(sesi, SH.BUDGET)).filter((b) => String(b.bulan) === ke);
-      for (const b of target) await hapus(sesi, SH.BUDGET, "id", String(b.id));
+      await hapusBanyak(sesi, SH.BUDGET, "id", target.map((b) => String(b.id)));
 
-      for (const b of sumber) {
-        await tambah(sesi, SH.BUDGET, {
+      await tambahSemua(
+        sesi,
+        SH.BUDGET,
+        sumber.map((b) => ({
           id: uid(), bulan: ke, category_id: String(b.category_id),
           jumlah: num(b.jumlah), updated_at: sekarang(),
-        });
-      }
+        }))
+      );
 
       return { dari, ke, jumlah: sumber.length, status: await statusBudget(sesi, ke) };
     }
@@ -1172,7 +1261,6 @@ export async function jalankan(
         });
       }
 
-      lupakanPengguna();
       const hasil = await cari(sesi, SH.USERS, (x) => String(x.email).toLowerCase() === email);
       return { user: publicUser(hasil as Baris) };
     }
@@ -1191,7 +1279,6 @@ export async function jalankan(
       if (aktif.length <= 1) throw new Error("At least one active user is required.");
 
       await hapus(sesi, SH.USERS, "email", row.email);
-      lupakanPengguna();
       return { deleted: email };
     }
 
