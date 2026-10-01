@@ -23,6 +23,23 @@ export function sheetId(): string {
   return SHEET_ID;
 }
 
+/**
+ * Uji menyeluruh: baca judul spreadsheet memakai kredensial yang ada.
+ * Dipakai endpoint /api/rpc untuk memastikan konfigurasi benar-benar jalan,
+ * bukan sekadar terisi.
+ */
+export async function ujiSheets(): Promise<string> {
+  if (!adaKredensial()) return "kredensial belum lengkap";
+  try {
+    const hasil = (await panggil(
+      `/${SHEET_ID}?fields=properties.title`
+    )) as { properties?: { title?: string } };
+    return `BERHASIL membaca spreadsheet: ${hasil.properties?.title || "(tanpa judul)"}`;
+  } catch (e) {
+    return `GAGAL: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
 /* ================================ AUTENTIKASI ============================= */
 
 let auth: GoogleAuth | null = null;

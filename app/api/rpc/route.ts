@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { adaKredensial } from "@/lib/sheets";
+import { adaKredensial, ujiSheets } from "@/lib/sheets";
 import { jalankan, penggunaTerdaftar, sesiBaru, siapkanSheet } from "@/lib/backend";
 
 export const runtime = "nodejs";
@@ -177,6 +177,7 @@ export async function GET() {
         GAS_URL: gas ? "terisi" : "KOSONG",
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ? "terisi" : "KOSONG",
         TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID ? "terisi" : "KOSONG",
+        ujiBacaSheets: await ujiSheets(),
       },
     },
   });
