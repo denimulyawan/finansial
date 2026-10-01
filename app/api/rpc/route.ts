@@ -79,7 +79,9 @@ async function verifikasi(idToken: string): Promise<Who | null> {
 /* ============================ CADANGAN: GAS ============================== */
 
 async function teruskanKeGas(body: unknown) {
-  const url = process.env.NEXT_PUBLIC_GAS_URL;
+  /* GAS_URL dipakai lebih dulu supaya URL cadangan ini tidak perlu
+     berawalan NEXT_PUBLIC_ (yang berarti ikut terkirim ke browser). */
+  const url = process.env.GAS_URL || process.env.NEXT_PUBLIC_GAS_URL;
   if (!url) {
     return gagal(
       "BELUM_DIKONFIGURASI",
