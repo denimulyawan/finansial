@@ -1293,6 +1293,31 @@ export async function jalankan(
   }
 }
 
+/**
+ * Data dasar yang selalu dibutuhkan aplikasi: pengguna, dompet, kategori.
+ *
+ * Semuanya dibaca dari sesi yang sudah dimuat, jadi TIDAK menambah
+ * permintaan ke Google. Dengan ini permintaan pertama halaman sekaligus
+ * membawa data dasar, sehingga membuka aplikasi cukup satu perjalanan.
+ */
+export async function meta(sesi: Sesi) {
+  const users = await bacaSemua(sesi, SH.USERS);
+  const saya = users.find(
+    (u) => String(u.email).toLowerCase() === sesi.email
+  );
+
+  return {
+    user: saya
+      ? publicUser(saya)
+      : { email: sesi.email, nama: "", peran: "admin", status: "aktif" },
+    wallets: await walletAktif(sesi),
+    categories: await kategoriAktif(sesi),
+    telegram: statusTelegram(),
+    today: hariIni(),
+    bulanIni: hariIni().slice(0, 7),
+  };
+}
+
 export async function adaSheetTransaksi(): Promise<boolean> {
   return (await idSheet(SH.TX)) !== null;
 }

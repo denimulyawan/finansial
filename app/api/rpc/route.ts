@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { adaKredensial, ujiSheets } from "@/lib/sheets";
 import {
   jalankan,
+  meta,
   muatSemua,
   penggunaTerdaftar,
   sesiBaru,
@@ -171,7 +172,10 @@ export async function POST(req: NextRequest) {
     if (!terdaftar.ok) return gagal("FORBIDDEN", terdaftar.pesan || "Not allowed.");
 
     const data = await jalankan(action, payload, sesi);
-    return balas({ ok: true, data });
+
+    /* Data dasar ikut dikirim supaya aplikasi tidak perlu permintaan kedua. */
+    const info = await meta(sesi);
+    return balas({ ok: true, meta: info, data });
   } catch (e) {
     return gagal("ERROR", pesanRamah(e));
   }

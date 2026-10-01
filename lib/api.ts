@@ -194,7 +194,7 @@ async function sekali<T>(
     );
   }
 
-  let json: { ok?: boolean; data?: T; error?: string; message?: string };
+  let json: { ok?: boolean; data?: T; error?: string; message?: string; meta?: unknown };
   try {
     json = await res.json();
   } catch {
@@ -202,6 +202,15 @@ async function sekali<T>(
       "RESPONS_TIDAK_VALID",
       "Balasan server tidak dikenali. Biasanya gangguan sesaat dari Apps Script, atau URL deployment salah."
     );
+  }
+
+  if (typeof window !== "undefined") {
+    if (json.meta) {
+      window.dispatchEvent(new CustomEvent(EVENT_META, { detail: json.meta }));
+    }
+    if (json.ok !== true && json.error === "UNAUTHORIZED") {
+      window.dispatchEvent(new Event(EVENT_KELUAR));
+    }
   }
 
   if (!json || json.ok !== true) {
@@ -289,3 +298,9 @@ export function muatGoogleIdentity(): Promise<void> {
 }
 
 export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+
+/** Setiap balasan server membawa data dasar; diteruskan ke AuthProvider. */
+export const EVENT_META = "finansial:meta";
+
+/** Dipicu saat server menolak token, supaya aplikasi keluar dengan tenang. */
+export const EVENT_KELUAR = "finansial:keluar";

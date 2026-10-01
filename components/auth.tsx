@@ -12,9 +12,12 @@ import {
 import { ShieldAlert, TriangleAlert } from "lucide-react";
 import {
   ApiError,
+  EVENT_KELUAR,
+  EVENT_META,
   GOOGLE_CLIENT_ID,
   adaKonfigurasi,
   ambilToken,
+  ambilUser,
   api,
   hapusSesi,
   muatGoogleIdentity,
@@ -52,33 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let hidup = true;
-    (async () => {
-      const token = ambilToken();
-      if (!token) {
-        if (hidup) setSiap(true);
-        return;
-      }
-      try {
-        await muatUlang();
-      } catch (e) {
-        hapusSesi();
-        if (hidup) {
-          const err = e as ApiError;
-          setPesanMasuk(
-            err.code === "UNAUTHORIZED"
-              ? "Your session expired. Please sign in again."
-              : err.message
-          );
-        }
-      } finally {
-        if (hidup) setSiap(true);
-      }
-    })();
-    return () => {
-      hidup = false;
-    };
-  }, [muatUlang]);
+    /* TIDAK memanggil server saat aplikasi dibuka.
+       Pengguna dipulihkan dari penyimpanan lokal, dan data dasar (dompet,
+       kategori) menyusul bersama permintaan pertama halaman. Jadi membuka
+       aplikasi hanya perlu SATU perjalanan, bukan dua. */
+    if (ambilToken()) {
+      const tersimpan = ambilUser<User>();
+      if (tersimpan) setUser(tersimpan);
+    }
+    setSiap(true);
+  }, []);
 
   const masuk = useCallback(
     async (credential: string) => {
@@ -112,6 +98,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, []);
+
+  /* Data dasar (pengguna, dompet, kategori) yang ikut pada setiap balasan
+     server. Karena itu aplikasi tidak perlu memintanya terpisah. */
+  useEffect(() => {
+    const h = (ev: Event) => {
+      const m = (ev as CustomEvent).detail as Bootstrap | undefined;
+      if (!m) return;
+      setBootstrap(m);
+      if (m.user) setUser(m.user);
+    };
+    window.addEventListener(EVENT_META, h);
+    return () => window.removeEventListener(EVENT_META, h);
+  }, []);
+
+  /* Sesi kedaluwarsa di tengah pemakaian: keluar dengan tenang. */
+  useEffect(() => {
+    const h = () => keluar();
+    window.addEventListener(EVENT_KELUAR, h);
+    return () => window.removeEventListener(EVENT_KELUAR, h);
+  }, [keluar]);
 
   return (
     <Ctx.Provider value={{ siap, user, bootstrap, pesanMasuk, masuk, keluar, muatUlang }}>
