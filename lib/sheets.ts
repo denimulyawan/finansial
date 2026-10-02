@@ -191,7 +191,7 @@ async function daftarSheet(): Promise<InfoSheet[]> {
   )) as { sheets?: { properties: InfoSheet }[] };
 
   const daftar = (hasil.sheets || []).map((s) => s.properties);
-  infoCache = { daftar, sampai: Date.now() + 60 * 1000 };
+  infoCache = { daftar, sampai: Date.now() + 10 * 60 * 1000 };
   return daftar;
 }
 
@@ -278,11 +278,12 @@ export async function hapusBaris(
 }
 
 /** Buat sheet baru beserta baris judulnya kalau belum ada. */
+/** Mengembalikan true kalau sheet-nya benar-benar baru dibuat. */
 export async function buatSheet(
   nama: string,
   header: string[]
-): Promise<void> {
-  if (await adaSheet(nama)) return;
+): Promise<boolean> {
+  if (await adaSheet(nama)) return false;
 
   await panggil(`/${SHEET_ID}:batchUpdate`, {
     method: "POST",
@@ -291,6 +292,7 @@ export async function buatSheet(
   lupakanInfoSheet();
 
   await tulisBaris(nama, 1, header);
+  return true;
 }
 
 function kolomKe(n: number): string {

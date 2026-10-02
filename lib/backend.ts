@@ -227,21 +227,23 @@ export async function muatSemua(sesi: Sesi): Promise<void> {
   nama.forEach((n, i) => sesi.baca.set(n, barisKeObjek(hasil[i] || [])));
 }
 
-/* Membuat sheet dan mengisi data awal hanya perlu diperiksa sesekali,
-   bukan pada setiap permintaan. */
-let siapSampai = 0;
-const MASA_SIAP = 10 * 60 * 1000;
-
 export async function siapkanJikaPerlu(sesi: Sesi): Promise<void> {
+  let adaYangBaru = false;
   for (const nama of Object.keys(HEADERS)) {
-    await buatSheet(nama, HEADERS[nama]);
+    if (await buatSheet(nama, HEADERS[nama])) adaYangBaru = true;
   }
 
-  if (Date.now() < siapSampai) return;
-  siapSampai = Date.now() + MASA_SIAP;
+  /*
+   * Data awal HANYA diisi kalau sheet-nya baru dibuat. Kalau tidak, dompet
+   * atau kategori yang sengaja dihapus akan muncul lagi dengan sendirinya.
+   *
+   * Ini juga menutup balapan: dulu dua permintaan yang datang hampir
+   * bersamaan sama-sama melihat sheet kosong lalu sama-sama mengisinya,
+   * sehingga muncul dua baris dompet dengan id sama.
+   */
+  if (!adaYangBaru) return;
 
   await seedKategori(sesi);
-  await seedDompet(sesi);
   await seedPemilik(sesi);
 }
 
@@ -340,18 +342,19 @@ async function ubah(
   return false;
 }
 
+/**
+ * Hapus berdasarkan kunci. Membuang SEMUA baris yang cocok, bukan hanya
+ * yang pertama - kalau tidak, baris kembar akan tertinggal dan datanya
+ * seolah tidak bisa dihapus.
+ */
 async function hapus(
   sesi: Sesi,
   nama: string,
   key: string,
   value: unknown
 ): Promise<boolean> {
-  const list = await bacaSemua(sesi, nama);
-  const ketemu = list.find((b) => String(b[key]) === String(value));
-  if (!ketemu) return false;
-  await hapusBaris(nama, [Number(ketemu._row)]);
-  lupakan(sesi, nama);
-  return true;
+  const jumlah = await hapusBanyak(sesi, nama, key, [value]);
+  return jumlah > 0;
 }
 
 function cari(sesi: Sesi, nama: string, pred: (b: Baris) => boolean) {
