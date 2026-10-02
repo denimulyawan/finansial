@@ -11,15 +11,12 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Plus,
   Settings,
   Target,
   Wallet as WalletIcon,
   X,
 } from "lucide-react";
 import { Avatar, Merek, useAuth } from "@/components/auth";
-import TxForm from "@/components/TxForm";
-import { Modal } from "@/components/ui";
 import { EVENT_BOOTSTRAP } from "@/lib/hooks";
 
 const MENU = [
@@ -35,13 +32,12 @@ const MENU = [
 const KUNCI_CIUT = "finansial.sidebar";
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { user, bootstrap, keluar, muatUlang } = useAuth();
+  const { user, keluar, muatUlang } = useAuth();
   const path = usePathname();
 
   const [drawer, setDrawer] = useState(false);
   const [ciut, setCiut] = useState(false);
   const [menuUser, setMenuUser] = useState(false);
-  const [cepat, setCepat] = useState(false);
 
   useEffect(() => {
     try {
@@ -186,15 +182,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           <div className="flex-1" />
 
-          <button
-            onClick={() => setCepat(true)}
-            className="btn btn-primary btn-sm"
-            title="Add transaction"
-          >
-            <Plus size={15} strokeWidth={2.6} />
-            <span className="hidden sm:inline">New</span>
-          </button>
-
           <div className="lg:hidden relative">
             <button onClick={() => setMenuUser((v) => !v)} aria-label="Account">
               <Avatar nama={user?.nama || user?.email || "?"} size={31} />
@@ -227,22 +214,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         <main className="p-4 sm:p-6 max-w-[1400px] mx-auto">{children}</main>
       </div>
-
-      <Modal
-        buka={cepat}
-        onTutup={() => setCepat(false)}
-        judul="New transaction"
-        lebar={620}
-      >
-        {bootstrap && (
-          <TxForm
-            wallets={bootstrap.wallets}
-            categories={bootstrap.categories}
-            onSelesai={() => setCepat(false)}
-            onBatal={() => setCepat(false)}
-          />
-        )}
-      </Modal>
     </div>
   );
 }
