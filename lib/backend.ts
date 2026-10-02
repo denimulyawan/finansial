@@ -547,17 +547,17 @@ async function statusBudget(sesi: Sesi, bulan: string) {
     terpakai: number; sisa: number; persen: number; level: string;
   }[] = [];
   let totalBatas = 0;
-  let adaTotal = false;
 
   budgets.forEach((b) => {
     const batas = num(b.jumlah);
     if (!(batas > 0)) return;
 
-    if (String(b.category_id) === KAT_TOTAL) {
-      adaTotal = true;
-      totalBatas = batas;
-      return;
-    }
+    /*
+     * Batas total TIDAK diisi manual lagi - dihitung dari jumlah semua
+     * batas kategori di bawah ini. Baris lama bertanda KAT_TOTAL
+     * diabaikan, dan akan terhapus sendiri pada penyimpanan berikutnya.
+     */
+    if (String(b.category_id) === KAT_TOTAL) return;
 
     const c = cMap[String(b.category_id)];
     /* kategori sistem dan yang disembunyikan tidak tampil sebagai pos tersendiri */
@@ -565,6 +565,7 @@ async function statusBudget(sesi: Sesi, bulan: string) {
 
     const terpakai = pakai[String(b.category_id)] || 0;
     const persen = batas > 0 ? (terpakai / batas) * 100 : 0;
+    totalBatas += batas;
     items.push({
       categoryId: String(b.category_id),
       nama: c ? c.nama : String(b.category_id),
@@ -579,7 +580,7 @@ async function statusBudget(sesi: Sesi, bulan: string) {
   items.sort((a, b) => b.persen - a.persen);
 
   let total = null;
-  if (adaTotal && totalBatas > 0) {
+  if (totalBatas > 0) {
     const p = (totalPakai / totalBatas) * 100;
     total = {
       batas: totalBatas, terpakai: totalPakai, sisa: totalBatas - totalPakai,
@@ -1145,6 +1146,8 @@ export async function jalankan(
       const items = (p.items as { category_id: string; jumlah: number }[]) || [];
       const baru: Baris[] = [];
       for (const it of items) {
+        /* batas total tidak lagi disimpan sendiri */
+        if (String(it.category_id) === KAT_TOTAL) continue;
         const jumlah = num(it.jumlah);
         if (!(jumlah > 0)) continue;
         baru.push({

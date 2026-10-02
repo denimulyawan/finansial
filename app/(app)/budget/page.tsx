@@ -49,7 +49,6 @@ export default function HalamanBudget() {
   });
 
   const [nilai, setNilai] = useState<Record<string, number>>({});
-  const [total, setTotal] = useState(0);
   const [kotor, setKotor] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [menyalin, setMenyalin] = useState(false);
@@ -61,7 +60,6 @@ export default function HalamanBudget() {
       map[i.categoryId] = i.batas;
     });
     setNilai(map);
-    setTotal(data.status.total?.batas || 0);
     setKotor(false);
   }, [data]);
 
@@ -73,13 +71,19 @@ export default function HalamanBudget() {
     return m;
   }, [data]);
 
+  /* Total dihitung dari jumlah semua batas kategori, bukan diisi manual.
+     Dihitung dari angka yang sedang diketik supaya ikut berubah seketika. */
+  const jumlahBatas = useMemo(
+    () => Object.values(nilai).reduce((a, v) => a + (v > 0 ? v : 0), 0),
+    [nilai]
+  );
+
   async function simpan() {
     setMenyimpan(true);
     try {
       const items = Object.entries(nilai)
         .filter(([, v]) => v > 0)
         .map(([category_id, jumlah]) => ({ category_id, jumlah }));
-      if (total > 0) items.push({ category_id: "TOTAL", jumlah: total });
 
       await api("budget.saveAll", { bulan, items });
       toast.sukses("Budget saved.");
@@ -189,15 +193,14 @@ export default function HalamanBudget() {
               <h2 className="text-[14.5px] font-semibold title">Monthly total</h2>
             </div>
 
-            <Field label="Cap for all spending">
-              <RupiahInput
-                value={total}
-                onChange={(v) => {
-                  setTotal(v);
-                  setKotor(true);
-                }}
-              />
-            </Field>
+            <p className="text-[12px] muted mb-1">Sum of all category caps</p>
+            <p className="num text-[24px] font-semibold title leading-none">
+              {rp(jumlahBatas)}
+            </p>
+            <p className="text-[11.5px] muted mt-2">
+              Filled in automatically. Set a cap on any category and this follows
+              along, so there is no second number to keep in sync.
+            </p>
 
             <div className="divider my-5" />
 

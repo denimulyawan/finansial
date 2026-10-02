@@ -1160,17 +1160,15 @@ function budgetStatus_(bulan) {
   var pakai = pemakaianKategori_(bulan);
 
   var items = [];
-  var totalBatas = 0, totalPakai = 0, adaTotal = false;
+  var totalBatas = 0, totalPakai = 0;
 
   budgets.forEach(function (b) {
     var batas = num_(b.jumlah);
     if (!(batas > 0)) return;
 
-    if (String(b.category_id) === KAT_TOTAL) {
-      adaTotal = true;
-      totalBatas = batas;
-      return;
-    }
+    /* Batas total tidak diisi manual lagi - dihitung dari jumlah semua
+       batas kategori. Baris lama bertanda KAT_TOTAL diabaikan. */
+    if (String(b.category_id) === KAT_TOTAL) return;
 
     var c = cMap[b.category_id];
     /* kategori sistem tidak ditampilkan sebagai pos budget tersendiri */
@@ -1178,6 +1176,7 @@ function budgetStatus_(bulan) {
 
     var terpakai = pakai[b.category_id] || 0;
     var persen = batas > 0 ? (terpakai / batas) * 100 : 0;
+    totalBatas += batas;
     items.push({
       categoryId: b.category_id,
       nama: c ? c.nama : b.category_id,
@@ -1198,7 +1197,7 @@ function budgetStatus_(bulan) {
   items.sort(function (a, b) { return b.persen - a.persen; });
 
   var total = null;
-  if (adaTotal && totalBatas > 0) {
+  if (totalBatas > 0) {
     var pTotal = (totalPakai / totalBatas) * 100;
     total = {
       batas: totalBatas,
