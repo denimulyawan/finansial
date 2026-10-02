@@ -255,7 +255,7 @@ export default function HalamanHutang() {
               disabled={
                 menghapus ||
                 ((hapus?.jmlTransaksi || 0) > 0 &&
-                  teksHapus.trim().toUpperCase() !== "DELETE")
+                  teksHapus.trim().toUpperCase() !== "HAPUS")
               }
             >
               {menghapus ? "Deleting…" : "Delete"}
@@ -289,13 +289,13 @@ export default function HalamanHutang() {
             {(hapus.jmlTransaksi || 0) > 0 && (
               <div>
                 <label className="label">
-                  Type <b>DELETE</b> to confirm
+                  Ketik <b>HAPUS</b> untuk memastikan
                 </label>
                 <input
                   className="input"
                   value={teksHapus}
                   onChange={(e) => setTeksHapus(e.target.value)}
-                  placeholder="DELETE"
+                  placeholder="HAPUS"
                   autoComplete="off"
                 />
               </div>

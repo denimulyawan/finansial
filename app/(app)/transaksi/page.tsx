@@ -115,6 +115,19 @@ export default function HalamanTransaksi() {
     (c) => c.sistem !== 1 && (!tipe || c.tipe === tipe)
   );
 
+  /*
+   * Sebelumnya muncul pesan galat DAN tulisan "No transactions" beserta
+   * tombol "Add one" - terbaca seolah seluruh catatan sudah terhapus.
+   */
+  if (error && !data) {
+    return (
+      <>
+        <PageHeader judul="Transactions" />
+        <Galat pesan={error.message} onCobaLagi={reload} />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader

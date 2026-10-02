@@ -50,6 +50,23 @@ export default function HalamanDashboard() {
   const totalKategori =
     data?.perKategori.reduce((a, b) => a + b.jumlah, 0) || 0;
 
+  /*
+   * Gagal memuat dan belum ada data sama sekali: tampilkan pesannya saja.
+   * "Rp 0" terbaca sebagai "saldo saya nol", dan pengguna bisa mengira
+   * datanya hilang lalu mencatat ulang transaksi yang sebenarnya masih ada.
+   */
+  if (error && !data) {
+    return (
+      <>
+        <PageHeader
+          judul="Dashboard"
+          aksi={<PilihBulan nilai={bulan} onUbah={setBulan} />}
+        />
+        <Galat pesan={error.message} onCobaLagi={reload} />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader

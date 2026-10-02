@@ -120,6 +120,16 @@ export default function HalamanLaporan() {
   const totalKeluarKategori = kategoriKeluar.reduce((a, k) => a + k.jumlah, 0);
   const maksKeluar = Math.max(0, ...kategoriKeluar.map((k) => k.jumlah)) || 1;
 
+  /* lihat penjelasan di Dashboard: jangan tampilkan angka nol saat gagal */
+  if (error && !data) {
+    return (
+      <>
+        <PageHeader judul="Reports" />
+        <Galat pesan={error.message} onCobaLagi={reload} />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader

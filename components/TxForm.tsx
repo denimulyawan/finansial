@@ -15,9 +15,14 @@ import { useToast } from "@/components/toast";
 import { labelTanggal, rp, tanggalHariIni } from "@/lib/format";
 import type { Category, Tipe, Tx, Wallet } from "@/lib/types";
 
+/*
+ * Ini kontrol paling menentukan di seluruh aplikasi: salah memilih jenis
+ * membuat semua laporan ikut salah. Nilainya sudah bahasa Indonesia sejak
+ * awal, jadi labelnya disamakan supaya tidak ada dua bahasa di satu tombol.
+ */
 const TIPE = [
-  { v: "Pemasukan", label: "Income", Ikon: ArrowDownLeft, warna: "var(--success)" },
-  { v: "Pengeluaran", label: "Expense", Ikon: ArrowUpRight, warna: "var(--danger)" },
+  { v: "Pemasukan", label: "Pemasukan", Ikon: ArrowDownLeft, warna: "var(--success)" },
+  { v: "Pengeluaran", label: "Pengeluaran", Ikon: ArrowUpRight, warna: "var(--danger)" },
   { v: "Transfer", label: "Transfer", Ikon: ArrowLeftRight, warna: "var(--info)" },
 ] as const;
 

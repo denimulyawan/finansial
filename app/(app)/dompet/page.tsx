@@ -482,7 +482,7 @@ export default function HalamanDompet() {
               onClick={hapusTerpilih}
               disabled={
                 menghapus ||
-                (adaTransaksiTerpilih && teksMassal.trim().toUpperCase() !== "DELETE")
+                (adaTransaksiTerpilih && teksMassal.trim().toUpperCase() !== "HAPUS")
               }
             >
               {menghapus ? "Deleting…" : "Delete"}
@@ -518,13 +518,13 @@ export default function HalamanDompet() {
               </p>
               <div>
                 <label className="label">
-                  Type <b>DELETE</b> to confirm
+                  Ketik <b>HAPUS</b> untuk memastikan
                 </label>
                 <input
                   className="input"
                   value={teksMassal}
                   onChange={(e) => setTeksMassal(e.target.value)}
-                  placeholder="DELETE"
+                  placeholder="HAPUS"
                   autoComplete="off"
                 />
               </div>
