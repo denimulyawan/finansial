@@ -86,7 +86,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <div className="flex items-center gap-2.5 px-4 h-[62px] shrink-0">
         <Merek size={32} />
-        <p className="font-semibold text-[15px] title">Finansial</p>
+        {/* namanya panjang, jadi dikecilkan sedikit dan dibiarkan turun
+            ke baris kedua kalau ruangnya tidak cukup */}
+        <p className="font-semibold text-[13px] title leading-tight">
+          Financial Deni Mulyawan
+        </p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">

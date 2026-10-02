@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ShieldAlert, TriangleAlert } from "lucide-react";
+import { Coins, ShieldAlert, TriangleAlert } from "lucide-react";
 import {
   ApiError,
   EVENT_KELUAR,
@@ -230,7 +230,9 @@ export function HalamanMasuk() {
       <div className="w-full max-w-[380px] anim-up">
         <div className="flex flex-col items-center mb-6">
           <Merek size={48} />
-          <h1 className="title text-[23px] mt-3.5">Finansial</h1>
+          <h1 className="title text-[20px] mt-3.5 text-center leading-tight">
+            Financial Deni Mulyawan
+          </h1>
         </div>
 
         <div className="card card-lg card-pad">
@@ -312,19 +314,19 @@ function Kode({ children }: { children: ReactNode }) {
 
 /* ================================== BRAND ================================= */
 
+/** Logo aplikasi: keping uang, bukan huruf, supaya langsung terbaca
+    sebagai aplikasi keuangan. */
 export function Merek({ size = 34 }: { size?: number }) {
   return (
     <div
-      className="grid place-items-center rounded-[12px] font-bold text-white shrink-0"
+      className="grid place-items-center rounded-[12px] text-white shrink-0"
       style={{
         width: size,
         height: size,
         background: "var(--accent)",
-        fontSize: size * 0.46,
-        letterSpacing: "-0.04em",
       }}
     >
-      F
+      <Coins size={Math.round(size * 0.56)} strokeWidth={2.2} />
     </div>
   );
 }

@@ -3,9 +3,9 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Finansial",
+  title: "Financial Deni Mulyawan",
   description:
-    "Personal finance tracker: income, expenses, wallet transfers, and budgets.",
+    "Catatan keuangan keluarga: pemasukan, pengeluaran, transfer antar dompet, dan budget.",
 };
 
 export const viewport: Viewport = {
