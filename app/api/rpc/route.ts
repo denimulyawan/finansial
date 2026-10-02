@@ -7,6 +7,7 @@ import {
   pastikanKolom,
   penggunaTerdaftar,
   sesiBaru,
+  siapkanData,
   siapkanJikaPerlu,
 } from "@/lib/backend";
 
@@ -168,13 +169,18 @@ export async function POST(req: NextRequest) {
     /* Pastikan sheet ada, lalu ambil SELURUH isinya dalam satu permintaan.
        Setelah itu semua pembacaan lain gratis. Kuota Google Sheets hanya
        60 pembacaan per menit, jadi jumlah permintaan harus ditekan. */
-    await siapkanJikaPerlu(sesi);
+    const adaYangBaru = await siapkanJikaPerlu();
     await muatSemua(sesi);
     /* tambahkan kolom baru kalau fitur baru menambahkannya */
     await pastikanKolom(sesi);
+    /* data awal diperiksa dari data yang sudah dimuat, jadi gratis */
+    await siapkanData(sesi, adaYangBaru);
 
     const terdaftar = await penggunaTerdaftar(sesi, who.email);
     if (!terdaftar.ok) return gagal("FORBIDDEN", terdaftar.pesan || "Not allowed.");
+
+    /* hak akses ditegakkan di jalankan(), bukan di sini */
+    sesi.peran = terdaftar.peran || "lihat";
 
     const data = await jalankan(action, payload, sesi);
 
@@ -207,6 +213,7 @@ export async function GET() {
         GOOGLE_SERVICE_ACCOUNT_JSON: isi(sa),
         GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "terisi" : "KOSONG",
         GAS_URL: gas ? "terisi" : "KOSONG",
+        OWNER_EMAIL: process.env.OWNER_EMAIL ? "terisi" : "KOSONG",
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ? "terisi" : "KOSONG",
         TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID ? "terisi" : "KOSONG",
         ujiBacaSheets: await ujiSheets(),

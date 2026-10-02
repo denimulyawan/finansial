@@ -78,16 +78,19 @@ export interface Sesi {
   /* panjang baris judul tiap sheet, untuk mendeteksi kolom yang belum ada */
   kolom: Map<string, number>;
   email: string;
+  /* "admin" atau "lihat". Bawaannya "lihat" supaya kalau lupa diisi,
+     yang terjadi adalah kurang hak, bukan kelebihan hak. */
+  peran: string;
 }
 
 export function sesiBaru(email: string): Sesi {
-  return { baca: new Map(), kolom: new Map(), email };
+  return { baca: new Map(), kolom: new Map(), email, peran: "lihat" };
 }
 
 export async function penggunaTerdaftar(
   sesi: Sesi,
   email: string
-): Promise<{ ok: boolean; pesan?: string }> {
+): Promise<{ ok: boolean; pesan?: string; peran?: string }> {
   /* dibaca dari sesi yang sudah dimuat, jadi tidak menambah permintaan */
   const daftar = await bacaSemua(sesi, SH.USERS);
   const target = email.toLowerCase();
@@ -104,7 +107,10 @@ export async function penggunaTerdaftar(
   if (String(u.status).toLowerCase() !== "aktif") {
     return { ok: false, pesan: "This account is inactive." };
   }
-  return { ok: true };
+  return {
+    ok: true,
+    peran: String(u.peran || "admin") === "lihat" ? "lihat" : "admin",
+  };
 }
 
 /* ================================= UTILITAS =============================== */
@@ -264,24 +270,38 @@ export async function muatSemua(sesi: Sesi): Promise<void> {
   });
 }
 
-export async function siapkanJikaPerlu(sesi: Sesi): Promise<void> {
+/** Pastikan semua sheet ada. Mengembalikan true kalau ada yang baru dibuat. */
+export async function siapkanJikaPerlu(): Promise<boolean> {
   let adaYangBaru = false;
   for (const nama of Object.keys(HEADERS)) {
     if (await buatSheet(nama, HEADERS[nama])) adaYangBaru = true;
   }
+  return adaYangBaru;
+}
+
+/**
+ * Isi data awal. Dipanggil SETELAH seluruh sheet dimuat, supaya
+ * pemeriksaannya memakai data yang sudah ada di memori dan tidak menambah
+ * satu pun permintaan ke Google.
+ */
+export async function siapkanData(
+  sesi: Sesi,
+  adaYangBaru: boolean
+): Promise<void> {
+  /*
+   * Pemilik diperiksa SELALU, bukan hanya saat spreadsheet baru.
+   *
+   * Kalau daftar pengguna sampai kosong, tidak ada seorang pun yang bisa
+   * masuk dan tidak ada cara memperbaikinya dari dalam aplikasi - termasuk
+   * oleh pemiliknya sendiri.
+   */
+  await seedPemilik(sesi);
 
   /*
-   * Data awal HANYA diisi kalau sheet-nya baru dibuat. Kalau tidak, dompet
-   * atau kategori yang sengaja dihapus akan muncul lagi dengan sendirinya.
-   *
-   * Ini juga menutup balapan: dulu dua permintaan yang datang hampir
-   * bersamaan sama-sama melihat sheet kosong lalu sama-sama mengisinya,
-   * sehingga muncul dua baris dompet dengan id sama.
+   * Kategori hanya diisi kalau sheet-nya baru dibuat. Kalau tidak, kategori
+   * yang sengaja dihapus akan muncul lagi dengan sendirinya.
    */
-  if (!adaYangBaru) return;
-
-  await seedKategori(sesi);
-  await seedPemilik(sesi);
+  if (adaYangBaru) await seedKategori(sesi);
 }
 
 /** Huruf kolom ke-n: 1 -> A, 27 -> AA. */
@@ -363,6 +383,31 @@ async function tambahSemua(
   lupakan(sesi, nama);
 }
 
+/**
+ * Cari nomor baris TERKINI untuk sekumpulan nilai kunci.
+ *
+ * Nomor baris dibekukan saat data dibaca di awal permintaan. Kalau
+ * permintaan lain menambah atau menghapus baris di sela-selanya, nomor
+ * sesudahnya bergeser - dan penghapusan bisa mengenai baris yang salah,
+ * yaitu transaksi orang lain. Karena itu nomor barisnya dibaca ULANG
+ * tepat sebelum menulis, bukan dipercaya dari ingatan.
+ */
+async function barisTerkini(
+  nama: string,
+  key: string,
+  nilai: Set<string>
+): Promise<number[]> {
+  const idx = HEADERS[nama].indexOf(key);
+  if (idx < 0) throw new Error(`Kolom "${key}" tidak ada di sheet ${nama}.`);
+
+  const values = await bacaRange(`${nama}!A1:ZZ`);
+  const baris: number[] = [];
+  for (let i = 1; i < values.length; i++) {
+    if (nilai.has(String(values[i][idx] ?? ""))) baris.push(i + 1);
+  }
+  return baris;
+}
+
 /** Hapus banyak baris berdasarkan kuncinya - satu permintaan, bukan satu per baris. */
 async function hapusBanyak(
   sesi: Sesi,
@@ -372,10 +417,7 @@ async function hapusBanyak(
 ): Promise<number> {
   if (!values.length) return 0;
   const set = new Set(values.map(String));
-  const list = await bacaSemua(sesi, nama);
-  const baris = list
-    .filter((b) => set.has(String(b[key])))
-    .map((b) => Number(b._row));
+  const baris = await barisTerkini(nama, key, set);
   if (!baris.length) return 0;
   await hapusBaris(nama, baris);
   lupakan(sesi, nama);
@@ -390,18 +432,25 @@ async function ubah(
   patch: Baris,
   extra?: { kolom: string; nilai: unknown }
 ): Promise<boolean> {
-  const list = await bacaSemua(sesi, nama);
   const head = HEADERS[nama];
+  const idxKey = head.indexOf(key);
+  if (idxKey < 0) throw new Error(`Kolom "${key}" tidak ada di sheet ${nama}.`);
+  const idxExtra = extra ? head.indexOf(extra.kolom) : -1;
 
-  for (const baris of list) {
-    let cocok = String(baris[key]) === String(value);
-    if (cocok && extra) cocok = String(baris[extra.kolom]) === String(extra.nilai);
-    if (!cocok) continue;
+  /* dibaca ulang supaya nomor barisnya pasti masih berlaku */
+  const values = await bacaRange(`${nama}!A1:ZZ`);
 
-    const baru = head.map((h) =>
-      patch[h] !== undefined ? patch[h] : (baris[h] ?? "")
+  for (let i = 1; i < values.length; i++) {
+    const r = values[i];
+    if (String(r[idxKey] ?? "") !== String(value)) continue;
+    if (extra && idxExtra >= 0 && String(r[idxExtra] ?? "") !== String(extra.nilai)) {
+      continue;
+    }
+
+    const baru = head.map((h, j) =>
+      patch[h] !== undefined ? patch[h] : (r[j] ?? "")
     );
-    await tulisBaris(nama, Number(baris._row), baru);
+    await tulisBaris(nama, i + 1, baru);
     lupakan(sesi, nama);
     return true;
   }
@@ -792,11 +841,37 @@ async function cekBudgetDanKirim(sesi: Sesi, bulan: string) {
 
 /* ================================== AKSI ================================== */
 
+/* Aksi yang mengubah data. Peran "lihat" tidak boleh memakainya. */
+const AKSI_MENGUBAH = new Set([
+  "tx.save",
+  "tx.delete",
+  "wallet.save",
+  "wallet.archive",
+  "wallet.delete",
+  "wallet.hapusBanyak",
+  "category.save",
+  "category.delete",
+  "budget.saveAll",
+  "budget.copy",
+]);
+
+/* Aksi yang hanya boleh dilakukan admin. */
+const AKSI_ADMIN = new Set(["users.save", "users.delete"]);
+
 export async function jalankan(
   action: string,
   p: Record<string, unknown>,
   sesi: Sesi
 ): Promise<unknown> {
+  const peran = sesi.peran || "lihat";
+
+  if (AKSI_ADMIN.has(action) && peran !== "admin") {
+    throw new Error("Hanya admin yang boleh mengubah daftar pengguna.");
+  }
+  if (AKSI_MENGUBAH.has(action) && peran !== "admin") {
+    throw new Error("Akun ini hanya bisa melihat, tidak bisa mengubah data.");
+  }
+
   switch (action) {
     case "bootstrap": {
       const user = await cari(sesi, SH.USERS, (u) => String(u.email).toLowerCase() === sesi.email);
@@ -1230,12 +1305,11 @@ export async function jalankan(
       const bulan = String(p.bulan || "");
       if (!/^\d{4}-\d{2}$/.test(bulan)) throw new Error("Month must be in YYYY-MM format.");
 
-      /* Satu permintaan untuk semua penghapusan, satu untuk semua penambahan.
-         Kuota tulis Google Sheets hanya 60 per menit. */
       const lama = (await bacaSemua(sesi, SH.BUDGET)).filter((b) => String(b.bulan) === bulan);
-      await hapusBanyak(sesi, SH.BUDGET, "id", lama.map((b) => String(b.id)));
 
-      const items = (p.items as { category_id: string; jumlah: number }[]) || [];
+      const items = Array.isArray(p.items)
+        ? (p.items as { category_id: string; jumlah: number }[])
+        : [];
       const baru: Baris[] = [];
       for (const it of items) {
         /* batas total tidak lagi disimpan sendiri */
@@ -1247,7 +1321,16 @@ export async function jalankan(
           jumlah, updated_at: sekarang(),
         });
       }
+      /*
+       * Tulis dulu, hapus kemudian.
+       *
+       * Kalau penulisannya gagal - misalnya kuota tulis habis di detik itu -
+       * yang tersisa hanya baris dobel, dan itu masih bisa dibetulkan.
+       * Urutan sebaliknya bisa menghapus budget sebulan tanpa jejak,
+       * padahal aplikasi hanya bilang "gagal".
+       */
       await tambahSemua(sesi, SH.BUDGET, baru);
+      await hapusBanyak(sesi, SH.BUDGET, "id", lama.map((b) => String(b.id)));
 
       return { bulan, status: await statusBudget(sesi, bulan) };
     }
@@ -1263,8 +1346,8 @@ export async function jalankan(
       if (!sumber.length) throw new Error(`No budget found for ${dari}.`);
 
       const target = (await bacaSemua(sesi, SH.BUDGET)).filter((b) => String(b.bulan) === ke);
-      await hapusBanyak(sesi, SH.BUDGET, "id", target.map((b) => String(b.id)));
 
+      /* tulis dulu, hapus kemudian - alasan sama seperti budget.saveAll */
       await tambahSemua(
         sesi,
         SH.BUDGET,
@@ -1273,6 +1356,7 @@ export async function jalankan(
           jumlah: num(b.jumlah), updated_at: sekarang(),
         }))
       );
+      await hapusBanyak(sesi, SH.BUDGET, "id", target.map((b) => String(b.id)));
 
       return { dari, ke, jumlah: sumber.length, status: await statusBudget(sesi, ke) };
     }
