@@ -47,11 +47,30 @@ export default function HalamanHutang() {
   const semua = data?.wallets || [];
   const aktif = semua.filter((w) => w.aktif === 1);
   const biasa = aktif.filter((w) => w.jenis !== "piutang" && w.jenis !== "hutang");
-  const piutang = aktif.filter((w) => w.jenis === "piutang");
-  const hutang = aktif.filter((w) => w.jenis === "hutang");
+  /*
+   * Arah utang ditentukan oleh TANDA saldonya, bukan oleh jenis dompetnya.
+   *
+   * Kalau utang dibayar melebihi sisanya, tandanya berbalik - dan itu
+   * memang berarti arah utangnya berbalik. Sebelumnya daftarnya disaring
+   * berdasarkan jenis saja, sehingga kelebihan bayar pada utang tetap
+   * tampil sebagai "saya berutang" - arahnya terbalik dari kenyataan.
+   *
+   * Saldo nol dianggap lunas dan tetap di daftar asalnya supaya bisa
+   * diarsipkan.
+   */
+  const utangSemua = aktif.filter(
+    (w) => w.jenis === "piutang" || w.jenis === "hutang"
+  );
+  const piutang = utangSemua.filter(
+    (w) => w.saldo > 0 || (w.saldo === 0 && w.jenis === "piutang")
+  );
+  const hutang = utangSemua.filter(
+    (w) => w.saldo < 0 || (w.saldo === 0 && w.jenis === "hutang")
+  );
 
-  const totalPiutang = piutang.reduce((a, w) => a + w.saldo, 0);
-  const totalHutang = hutang.reduce((a, w) => a + w.saldo, 0);
+  /* nilai mutlak, karena arahnya sudah ditentukan oleh daftarnya */
+  const totalPiutang = piutang.reduce((a, w) => a + Math.abs(w.saldo), 0);
+  const totalHutang = hutang.reduce((a, w) => a + Math.abs(w.saldo), 0);
 
   async function arsipkan(w: WalletSaldo) {
     try {
@@ -408,7 +427,11 @@ function DaftarUtang({
         ) : (
           <div className="space-y-1.5">
             {items.map((w) => {
-              const nominal = jenis === "piutang" ? w.saldo : Math.abs(w.saldo);
+              const nominal = Math.abs(w.saldo);
+              /* kartu ini pindah daftar karena jenis dompetnya berbeda */
+              const berbalik =
+                (jenis === "piutang" && w.jenis === "hutang") ||
+                (jenis === "hutang" && w.jenis === "piutang");
               const beres = Math.abs(w.saldo) < 0.5;
 
               return (
@@ -429,7 +452,14 @@ function DaftarUtang({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-medium truncate">{w.nama}</p>
+                      <p className="text-[13px] font-medium truncate">
+                        {w.nama}
+                        {berbalik && !beres && (
+                          <span className="badge badge-warning ml-2">
+                            kelebihan bayar
+                          </span>
+                        )}
+                      </p>
                       <button
                         type="button"
                         onClick={() => onRincian(w)}
@@ -505,6 +535,10 @@ function FormUtang({
   const [tanggal, setTanggal] = useState(tanggalHariIni());
   const [catatan, setCatatan] = useState("");
   const [sedang, setSedang] = useState(false);
+
+  /* sisa utangnya, selalu positif berapa pun jenis dompetnya */
+  const sisa = wallet ? Math.abs(wallet.saldo) : 0;
+  const kelebihan = !butuhNama && jumlah > sisa + 0.5;
 
   async function simpan() {
     if (butuhNama && !nama.trim()) return toast.gagal("Enter a name.");
@@ -591,9 +625,41 @@ function FormUtang({
         )
       )}
 
+      {!butuhNama && wallet && (
+        <div className="flex items-center justify-between gap-3 text-[12.5px]">
+          <span className="muted">
+            Sisa {mode === "terima" ? "piutang" : "utang"}: {rp(sisa)}
+          </span>
+          {sisa > 0.5 && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setJumlah(sisa)}
+            >
+              Lunasi
+            </button>
+          )}
+        </div>
+      )}
+
       <Field label="Amount">
         <RupiahInput value={jumlah} onChange={setJumlah} autoFocus={!butuhNama} />
       </Field>
+
+      {kelebihan && (
+        <p
+          className="rounded-xl p-3 text-[12px] leading-relaxed"
+          style={{
+            background: "color-mix(in srgb, #f59e0b 10%, #fff)",
+            color: "var(--text-2)",
+          }}
+        >
+          Melebihi sisa sebesar <b>{rp(jumlah - sisa)}</b>. Kelebihannya
+          tercatat sebagai <b>{mode === "terima" ? "utangmu" : "piutangmu"}</b>
+          {" "}ke orang ini - arah utangnya berbalik, dan kartunya akan pindah
+          ke daftar {mode === "terima" ? "Payable" : "Receivable"}.
+        </p>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-3.5">
         <Field label="Date">
