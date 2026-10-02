@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Coins, ShieldAlert, TriangleAlert } from "lucide-react";
+import { Banknote, ShieldAlert, TriangleAlert } from "lucide-react";
 import {
   ApiError,
   EVENT_KELUAR,
@@ -314,8 +314,14 @@ function Kode({ children }: { children: ReactNode }) {
 
 /* ================================== BRAND ================================= */
 
-/** Logo aplikasi: keping uang, bukan huruf, supaya langsung terbaca
-    sebagai aplikasi keuangan. */
+/**
+ * Logo aplikasi: uang lembaran di atas kotak hijau.
+ *
+ * Hijau dipakai karena sudah menjadi warna "uang masuk" di seluruh
+ * aplikasi, jadi logonya sejalan dengan isinya. Ikonnya dibuat sedikit
+ * lebih besar dari biasanya karena lembaran uang lebih lebar daripada
+ * tinggi, sehingga terlihat kecil kalau ukurannya disamakan.
+ */
 export function Merek({ size = 34 }: { size?: number }) {
   return (
     <div
@@ -323,10 +329,10 @@ export function Merek({ size = 34 }: { size?: number }) {
       style={{
         width: size,
         height: size,
-        background: "var(--accent)",
+        background: "var(--success)",
       }}
     >
-      <Coins size={Math.round(size * 0.56)} strokeWidth={2.2} />
+      <Banknote size={Math.round(size * 0.64)} strokeWidth={2.1} />
     </div>
   );
 }
