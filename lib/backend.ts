@@ -114,17 +114,47 @@ function uid(): string {
   return (Date.now().toString(36) + acak() + acak()).slice(0, 16);
 }
 
+/**
+ * Ubah apa pun menjadi angka.
+ *
+ * Versi lama salah besar: "1.500.000" dibaca parseFloat menjadi 1,5 -
+ * salah satu juta kali. Itu terjadi kalau sel di spreadsheet diformat
+ * sebagai angka/uang, karena Google mengembalikannya sebagai teks yang
+ * sudah bertitik. Sekarang titik dan koma diperiksa berdasarkan POLA:
+ * sekumpulan tepat tiga angka sesudah pemisah berarti pemisah ribuan.
+ */
 function num(v: unknown): number {
   if (v === null || v === undefined || v === "") return 0;
   if (typeof v === "number") return isFinite(v) ? v : 0;
-  const s = String(v).replace(/[^0-9,.\-]/g, "");
-  const bersih =
-    s.includes(",") && s.includes(".")
-      ? s.replace(/\./g, "").replace(",", ".")
-      : s.includes(",")
-        ? s.replace(",", ".")
-        : s;
-  const n = parseFloat(bersih);
+
+  /* sisakan angka, titik, koma, dan tanda minus saja */
+  let s = String(v).replace(/[^0-9,.\-]/g, "");
+  if (!s) return 0;
+
+  const adaTitik = s.includes(".");
+  const adaKoma = s.includes(",");
+
+  if (adaTitik && adaKoma) {
+    /* dua-duanya ada: yang paling kanan adalah pemisah desimal */
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      s = s.replace(/\./g, "").replace(",", "."); /* 1.500.000,50 */
+    } else {
+      s = s.replace(/,/g, ""); /* 1,500,000.50 */
+    }
+  } else if (adaKoma || adaTitik) {
+    const pemisah = adaKoma ? "," : ".";
+    const bagian = s.split(pemisah);
+    /* pemisah ribuan kalau setiap kelompok sesudahnya tepat 3 angka */
+    const ribuan =
+      bagian.length > 1 && bagian.slice(1).every((b) => b.length === 3);
+    if (ribuan) {
+      s = bagian.join("");
+    } else if (adaKoma) {
+      s = s.replace(",", ".");
+    }
+  }
+
+  const n = parseFloat(s);
   return isFinite(n) ? n : 0;
 }
 

@@ -84,8 +84,10 @@ async function verifikasi(idToken: string): Promise<Who | null> {
   };
   if (!p.email || p.email_verified !== "true") return null;
 
+  /* Wajib cocok. Dulu "if (aud && ...)" sehingga kalau variabelnya kosong
+     token dari aplikasi Google mana pun diterima. */
   const aud = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  if (aud && p.aud !== aud) return null;
+  if (!aud || p.aud !== aud) return null;
 
   const who: Who = {
     email: String(p.email).toLowerCase(),

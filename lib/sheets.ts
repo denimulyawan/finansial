@@ -28,15 +28,34 @@ export function sheetId(): string {
  * Dipakai endpoint /api/rpc untuk memastikan konfigurasi benar-benar jalan,
  * bukan sekadar terisi.
  */
+let ujiCache: { hasil: string; sampai: number } | null = null;
+
 export async function ujiSheets(): Promise<string> {
-  if (!adaKredensial()) return "kredensial belum lengkap";
+  /*
+   * Hasilnya disimpan semenit.
+   *
+   * Endpoint GET ini terbuka untuk umum, dan setiap panggilan melakukan
+   * satu pembacaan ke Google Sheets. Tanpa cache, siapa pun bisa
+   * menghabiskan kuota 60 pembacaan per menit hanya dengan menekan
+   * refresh berulang kali - dan aplikasinya mati untuk pemiliknya.
+   */
+  if (ujiCache && Date.now() < ujiCache.sampai) return ujiCache.hasil;
+
+  const simpan = (hasil: string) => {
+    ujiCache = { hasil, sampai: Date.now() + 60_000 };
+    return hasil;
+  };
+
+  if (!adaKredensial()) return simpan("kredensial belum lengkap");
   try {
     const hasil = (await panggil(
       `/${SHEET_ID}?fields=properties.title`
     )) as { properties?: { title?: string } };
-    return `BERHASIL membaca spreadsheet: ${hasil.properties?.title || "(tanpa judul)"}`;
+    return simpan(
+      `BERHASIL membaca spreadsheet: ${hasil.properties?.title || "(tanpa judul)"}`
+    );
   } catch (e) {
-    return `GAGAL: ${e instanceof Error ? e.message : String(e)}`;
+    return simpan(`GAGAL: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
