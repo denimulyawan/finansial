@@ -107,6 +107,20 @@ export async function penggunaTerdaftar(
   if (String(u.status).toLowerCase() !== "aktif") {
     return { ok: false, pesan: "This account is inactive." };
   }
+
+  /*
+   * Catat waktu masuk terakhir - kolomnya sudah ada sejak awal tetapi
+   * tidak pernah diisi, sehingga di Pengaturan selalu tampil kosong.
+   *
+   * Ditulis paling banyak sekali per jam, bukan setiap permintaan, supaya
+   * tidak memakai jatah penulisan Google Sheets.
+   */
+  const terakhir = String(u.last_login || "");
+  const kini = sekarang();
+  if (terakhir.slice(0, 13) !== kini.slice(0, 13)) {
+    await ubah(sesi, SH.USERS, "email", String(u.email), { last_login: kini });
+  }
+
   return {
     ok: true,
     peran: String(u.peran || "admin") === "lihat" ? "lihat" : "admin",
