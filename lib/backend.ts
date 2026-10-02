@@ -969,6 +969,55 @@ export async function jalankan(
       };
     }
 
+    case "hutang.rincian": {
+      const id = String(p.id || "");
+      const semua = (await bacaSemua(sesi, SH.WALLETS)).map(normalWallet);
+      const dompet = semua.find((w) => w.id === id);
+      if (!dompet) throw new Error("Wallet not found.");
+
+      const namaDompet: Record<string, string> = {};
+      semua.forEach((w) => { namaDompet[w.id] = w.nama; });
+
+      const txs = await semuaTx(sesi);
+      const saldo = hitungSaldo(semua, txs)[id] || 0;
+
+      /* masuk = uang yang MASUK ke dompet orang ini;
+         keluar = uang yang KELUAR darinya. Selisihnya sama dengan saldo. */
+      let masuk = 0;
+      let keluar = 0;
+      const riwayat = txs
+        .filter(
+          (t) =>
+            String(t.wallet_id) === id || String(t.wallet_tujuan_id) === id
+        )
+        .sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)))
+        .map((t) => {
+          const j = num(t.jumlah);
+          const keSini = String(t.wallet_tujuan_id) === id;
+          if (keSini) masuk += j;
+          else keluar += j;
+          const lawan = keSini
+            ? String(t.wallet_id)
+            : String(t.wallet_tujuan_id);
+          return {
+            id: String(t.id),
+            tanggal: tanggalStr(t.tanggal),
+            jumlah: j,
+            arah: keSini ? "masuk" : "keluar",
+            dompet: namaDompet[lawan] || lawan,
+            catatan: String(t.catatan || ""),
+          };
+        });
+
+      return {
+        wallet: {
+          id: dompet.id, nama: dompet.nama, jenis: dompet.jenis,
+          catatan: dompet.catatan,
+        },
+        saldo, masuk, keluar, riwayat,
+      };
+    }
+
     case "wallet.save": {
       const w = (p.wallet || p) as Baris;
       const nama = String(w.nama || "").trim();

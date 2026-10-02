@@ -38,6 +38,7 @@ export default function HalamanHutang() {
   );
   const [form, setForm] = useState<Konteks | null>(null);
   const [lunas, setLunas] = useState<WalletSaldo | null>(null);
+  const [rincian, setRincian] = useState<WalletSaldo | null>(null);
 
   const semua = data?.wallets || [];
   const aktif = semua.filter((w) => w.aktif === 1);
@@ -123,6 +124,7 @@ export default function HalamanHutang() {
             onAksi={(w) => setForm({ mode: "terima", wallet: w })}
             onTambah={() => setForm({ mode: "piutang-baru" })}
             onLunas={(w) => setLunas(w)}
+            onRincian={(w) => setRincian(w)}
           />
           <DaftarUtang
             judul="Payable"
@@ -132,6 +134,7 @@ export default function HalamanHutang() {
             onAksi={(w) => setForm({ mode: "bayar", wallet: w })}
             onTambah={() => setForm({ mode: "hutang-baru" })}
             onLunas={(w) => setLunas(w)}
+            onRincian={(w) => setRincian(w)}
           />
         </div>
       )}
@@ -152,6 +155,30 @@ export default function HalamanHutang() {
               picuMuatUlang();
             }}
             onBatal={() => setForm(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        buka={!!rincian}
+        onTutup={() => setRincian(null)}
+        judul={rincian ? rincian.nama : ""}
+        sub={rincian?.jenis === "piutang" ? "Owed to me" : "I owe"}
+        lebar={520}
+      >
+        {rincian && (
+          <PanelRincian
+            wallet={rincian}
+            onBayar={() => {
+              const w = rincian;
+              setRincian(null);
+              if (w) {
+                setForm({
+                  mode: w.jenis === "piutang" ? "terima" : "bayar",
+                  wallet: w,
+                });
+              }
+            }}
           />
         )}
       </Modal>
@@ -246,6 +273,7 @@ function DaftarUtang({
   onAksi,
   onTambah,
   onLunas,
+  onRincian,
 }: {
   judul: string;
   items: WalletSaldo[];
@@ -254,6 +282,7 @@ function DaftarUtang({
   onAksi: (w: WalletSaldo) => void;
   onTambah: () => void;
   onLunas: (w: WalletSaldo) => void;
+  onRincian: (w: WalletSaldo) => void;
 }) {
   const warna = jenis === "piutang" ? "var(--success)" : "var(--danger)";
 
@@ -302,10 +331,14 @@ function DaftarUtang({
 
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-medium truncate">{w.nama}</p>
-                      <p className="text-[10.5px] muted truncate">
-                        {w.jmlTransaksi} entries
+                      <button
+                        type="button"
+                        onClick={() => onRincian(w)}
+                        className="text-[10.5px] muted truncate text-left hover:underline"
+                      >
+                        {w.jmlTransaksi} entries ›
                         {w.catatan ? ` · ${w.catatan}` : ""}
-                      </p>
+                      </button>
                     </div>
 
                     <p
@@ -383,9 +416,19 @@ function FormUtang({
         walletId = hasil.wallet.id;
       }
 
+      /*
+       * Arah uangnya:
+       *   piutang-baru (kita meminjamkan) dan bayar (kita melunasi utang)
+       *     -> uang KELUAR dari dompet kita
+       *   terima (orang melunasi) dan hutang-baru (kita meminjam)
+       *     -> uang MASUK ke dompet kita
+       *
+       * Sebelumnya terima dan bayar tertukar, sehingga membayar utang
+       * justru menambah utangnya.
+       */
       let dari = dompetId;
       let ke = walletId;
-      if (mode === "hutang-baru" || mode === "bayar") {
+      if (mode === "terima" || mode === "hutang-baru") {
         dari = walletId;
         ke = dompetId;
       }
@@ -490,6 +533,136 @@ function FormUtang({
           {sedang ? "Saving…" : "Save"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ============================== RINCIAN ================================== */
+
+interface Rincian {
+  wallet: { id: string; nama: string; jenis: string; catatan: string };
+  saldo: number;
+  masuk: number;
+  keluar: number;
+  riwayat: {
+    id: string;
+    tanggal: string;
+    jumlah: number;
+    arah: "masuk" | "keluar";
+    dompet: string;
+    catatan: string;
+  }[];
+}
+
+function PanelRincian({
+  wallet,
+  onBayar,
+}: {
+  wallet: WalletSaldo;
+  onBayar: () => void;
+}) {
+  const { data, loading } = useApi<Rincian>("hutang.rincian", { id: wallet.id });
+
+  const piutang = wallet.jenis === "piutang";
+  const warna = piutang ? "var(--success)" : "var(--danger)";
+
+  /* Piutang: uang MASUK ke dompet orang = kita meminjamkan.
+     Hutang:  uang KELUAR dari dompet orang = kita yang meminjam. */
+  const awal = piutang ? data?.masuk : data?.keluar;
+  const kembali = piutang ? data?.keluar : data?.masuk;
+
+  if (loading || !data) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-14 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="rounded-xl p-3.5 space-y-2"
+        style={{ background: "var(--surface-2)" }}
+      >
+        <BarisRingkas
+          label={piutang ? "Lent out" : "Borrowed"}
+          nilai={rp(awal || 0)}
+        />
+        <BarisRingkas
+          label={piutang ? "Repaid" : "Paid back"}
+          nilai={rp(kembali || 0)}
+        />
+        <div className="divider my-1.5" />
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-semibold">Outstanding</span>
+          <span className="num text-[15px] font-semibold" style={{ color: warna }}>
+            {rp(Math.abs(data.saldo))}
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <p className="label">History</p>
+        {data.riwayat.length === 0 ? (
+          <p className="text-[12.5px] muted">No entries yet.</p>
+        ) : (
+          <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
+            {data.riwayat.map((r) => {
+              const keSini = r.arah === "masuk";
+              return (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-3 p-2.5 rounded-xl"
+                  style={{ background: "var(--surface-2)" }}
+                >
+                  <span
+                    className="grid place-items-center w-7 h-7 rounded-lg shrink-0"
+                    style={{
+                      background: `color-mix(in srgb, ${warna} 11%, transparent)`,
+                      color: warna,
+                    }}
+                  >
+                    {keSini ? <ArrowDownLeft size={13} /> : <ArrowUpRight size={13} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12.5px] truncate">
+                      {r.catatan || (keSini ? "Money in" : "Money out")}
+                    </p>
+                    <p className="text-[10.5px] muted truncate">
+                      {labelTanggal(r.tanggal)} · {r.dompet}
+                    </p>
+                  </div>
+                  <span
+                    className="num text-[12.5px] font-semibold shrink-0"
+                    style={{ color: keSini ? "var(--success)" : "var(--danger)" }}
+                  >
+                    {keSini ? "+" : "−"}
+                    {rp(r.jumlah)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button className="btn btn-primary" onClick={onBayar}>
+          {piutang ? "Receive payment" : "Pay"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BarisRingkas({ label, nilai }: { label: string; nilai: string }) {
+  return (
+    <div className="flex items-center justify-between text-[12.5px]">
+      <span className="text-2">{label}</span>
+      <span className="num font-medium">{nilai}</span>
     </div>
   );
 }
