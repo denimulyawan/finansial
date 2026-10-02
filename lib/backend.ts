@@ -7,6 +7,7 @@ import {
   tambahBanyak,
   tambahBaris,
   tulisBaris,
+  tulisRange,
 } from "./sheets";
 
 /**
@@ -21,7 +22,7 @@ import {
 export const HEADERS: Record<string, string[]> = {
   Users: ["email", "nama", "peran", "status", "created_at", "last_login"],
   Dompet: ["id", "nama", "jenis", "saldo_awal", "urutan", "aktif", "catatan", "created_at"],
-  Kategori: ["id", "nama", "tipe", "warna", "ikon", "sistem", "urutan", "aktif"],
+  Kategori: ["id", "nama", "tipe", "warna", "ikon", "sistem", "urutan", "aktif", "sembunyi_budget"],
   Transaksi: [
     "id", "tanggal", "tipe", "wallet_id", "wallet_tujuan_id", "category_id",
     "jumlah", "biaya_admin", "catatan", "created_by", "created_at", "updated_at",
@@ -74,11 +75,13 @@ const DOMPET_AWAL = [{ id: "tunai", nama: "Cash", jenis: "tunai" }];
 type Baris = Record<string, unknown>;
 export interface Sesi {
   baca: Map<string, Baris[]>;
+  /* panjang baris judul tiap sheet, untuk mendeteksi kolom yang belum ada */
+  kolom: Map<string, number>;
   email: string;
 }
 
 export function sesiBaru(email: string): Sesi {
-  return { baca: new Map(), email };
+  return { baca: new Map(), kolom: new Map(), email };
 }
 
 export async function penggunaTerdaftar(
@@ -224,7 +227,11 @@ function barisKeObjek(values: unknown[][]): Baris[] {
 export async function muatSemua(sesi: Sesi): Promise<void> {
   const nama = Object.keys(HEADERS);
   const hasil = await bacaBanyak(nama.map((n) => `${n}!A1:ZZ`));
-  nama.forEach((n, i) => sesi.baca.set(n, barisKeObjek(hasil[i] || [])));
+  nama.forEach((n, i) => {
+    const values = hasil[i] || [];
+    sesi.kolom.set(n, (values[0] || []).length);
+    sesi.baca.set(n, barisKeObjek(values));
+  });
 }
 
 export async function siapkanJikaPerlu(sesi: Sesi): Promise<void> {
@@ -245,6 +252,35 @@ export async function siapkanJikaPerlu(sesi: Sesi): Promise<void> {
 
   await seedKategori(sesi);
   await seedPemilik(sesi);
+}
+
+/** Huruf kolom ke-n: 1 -> A, 27 -> AA. */
+function kolomKe(n: number): string {
+  let s = "";
+  let x = n;
+  while (x > 0) {
+    const sisa = (x - 1) % 26;
+    s = String.fromCharCode(65 + sisa) + s;
+    x = Math.floor((x - 1) / 26);
+  }
+  return s || "A";
+}
+
+/**
+ * Tambahkan nama kolom yang belum ada di baris judul.
+ *
+ * Diperlukan saat fitur baru menambah kolom, misalnya sembunyi_budget.
+ * Baris lama dibiarkan kosong, dan kolom kosong diperlakukan sebagai
+ * nilai bawaan sehingga data lama tidak berubah artinya.
+ */
+export async function pastikanKolom(sesi: Sesi): Promise<void> {
+  for (const nama of Object.keys(HEADERS)) {
+    const head = HEADERS[nama];
+    const ada = sesi.kolom.get(nama) || 0;
+    if (ada >= head.length) continue;
+    await tulisRange(`${nama}!${kolomKe(ada + 1)}1`, [head.slice(ada)]);
+    sesi.kolom.set(nama, head.length);
+  }
 }
 
 /** Baca seluruh isi sheet, disimpan selama satu permintaan saja. */
@@ -420,6 +456,8 @@ function normalCategory(c: Baris) {
     warna: String(c.warna || "#64748b"), ikon: String(c.ikon || "Tag"),
     sistem: num(c.sistem) === 1 ? 1 : 0, urutan: num(c.urutan),
     aktif: num(c.aktif) === 0 ? 0 : 1,
+    /* kosong berarti tampil; hanya angka 1 yang menyembunyikan */
+    tanpaBudget: num(c.sembunyi_budget) === 1 ? 1 : 0,
   };
 }
 
@@ -522,8 +560,8 @@ async function statusBudget(sesi: Sesi, bulan: string) {
     }
 
     const c = cMap[String(b.category_id)];
-    /* kategori sistem tidak ditampilkan sebagai pos budget tersendiri */
-    if (c && c.sistem === 1) return;
+    /* kategori sistem dan yang disembunyikan tidak tampil sebagai pos tersendiri */
+    if (c && (c.sistem === 1 || c.tanpaBudget === 1)) return;
 
     const terpakai = pakai[String(b.category_id)] || 0;
     const persen = batas > 0 ? (terpakai / batas) * 100 : 0;
@@ -1046,6 +1084,8 @@ export async function jalankan(
         id, nama, tipe, warna: String(c.warna || "#64748b"),
         ikon: String(c.ikon || "Tag"), sistem: 0,
         urutan: c.urutan !== undefined ? num(c.urutan) : daftar.length + 1, aktif: 1,
+        /* kosong berarti tampil di budget */
+        sembunyi_budget: num(c.sembunyi_budget) === 1 ? 1 : "",
       };
 
       if (adaBaris) await ubah(sesi, SH.CATS, "id", id, rec);
@@ -1085,7 +1125,7 @@ export async function jalankan(
         /* Kategori sistem seperti Biaya Admin tidak ikut, karena biayanya
            sudah dihitung otomatis dari transfer. Tetap masuk hitungan total. */
         kategoriTersedia: (await kategoriAktif(sesi)).filter(
-          (c) => c.tipe === "Pengeluaran" && c.sistem !== 1
+          (c) => c.tipe === "Pengeluaran" && c.sistem !== 1 && c.tanpaBudget !== 1
         ),
         adaBudgetBulanLalu: (await bacaSemua(sesi, SH.BUDGET)).some(
           (b) => String(b.bulan) === sebelum

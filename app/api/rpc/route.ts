@@ -4,6 +4,7 @@ import {
   jalankan,
   meta,
   muatSemua,
+  pastikanKolom,
   penggunaTerdaftar,
   sesiBaru,
   siapkanJikaPerlu,
@@ -167,6 +168,8 @@ export async function POST(req: NextRequest) {
        60 pembacaan per menit, jadi jumlah permintaan harus ditekan. */
     await siapkanJikaPerlu(sesi);
     await muatSemua(sesi);
+    /* tambahkan kolom baru kalau fitur baru menambahkannya */
+    await pastikanKolom(sesi);
 
     const terdaftar = await penggunaTerdaftar(sesi, who.email);
     if (!terdaftar.ok) return gagal("FORBIDDEN", terdaftar.pesan || "Not allowed.");

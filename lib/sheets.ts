@@ -237,6 +237,17 @@ export async function tambahBanyak(
   );
 }
 
+/** Tulis ke rentang bebas, dipakai untuk menambah kolom yang belum ada. */
+export async function tulisRange(
+  range: string,
+  values: unknown[][]
+): Promise<void> {
+  await panggil(
+    `/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
+    { method: "PUT", body: { values } }
+  );
+}
+
 export async function tulisBaris(
   nama: string,
   baris: number,

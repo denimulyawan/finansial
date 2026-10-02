@@ -528,6 +528,11 @@ function DaftarKategori({
               />
               <span className="text-[13px] flex-1 truncate">{c.nama}</span>
               {c.sistem === 1 && <span className="badge badge-netral">System</span>}
+              {c.tanpaBudget === 1 && (
+                <span className="badge badge-netral" title="Hidden from the Budget page">
+                  No budget
+                </span>
+              )}
               <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   className="btn btn-ghost btn-icon btn-sm"
@@ -570,6 +575,7 @@ function FormKategori({
   const [nama, setNama] = useState(awal?.nama || "");
   const [tipe, setTipe] = useState<"Pemasukan" | "Pengeluaran">(awal?.tipe || tipeAwal);
   const [warna, setWarna] = useState(awal?.warna || "#6366f1");
+  const [tanpaBudget, setTanpaBudget] = useState(awal?.tanpaBudget === 1);
   const [sedang, setSedang] = useState(false);
 
   async function simpan() {
@@ -577,7 +583,14 @@ function FormKategori({
     setSedang(true);
     try {
       await api("category.save", {
-        category: { id: awal?.id || idBaru(), nama, tipe, warna },
+        category: {
+          id: awal?.id || idBaru(),
+          nama,
+          tipe,
+          warna,
+          /* kosong berarti tampil di budget */
+          sembunyi_budget: tanpaBudget ? 1 : 0,
+        },
       });
       toast.sukses("Category saved.");
       onSelesai();
@@ -632,6 +645,28 @@ function FormKategori({
           ))}
         </div>
       </Field>
+
+      {tipe === "Pengeluaran" && (
+        <label
+          className="flex items-start gap-2.5 cursor-pointer p-3 rounded-xl"
+          style={{ background: "var(--surface-2)" }}
+        >
+          <input
+            type="checkbox"
+            className="w-4 h-4 mt-0.5 shrink-0 cursor-pointer"
+            style={{ accentColor: "var(--accent)" }}
+            checked={tanpaBudget}
+            onChange={(e) => setTanpaBudget(e.target.checked)}
+          />
+          <span className="text-[12.5px] text-2 leading-snug">
+            Hide from Budget
+            <span className="block muted mt-0.5">
+              Still usable for recording, and its spending still counts in the
+              monthly total. Useful when a cap makes no sense for this category.
+            </span>
+          </span>
+        </label>
+      )}
 
       <div className="flex items-center justify-end gap-2 pt-1">
         <button className="btn btn-ghost" onClick={onBatal} disabled={sedang}>

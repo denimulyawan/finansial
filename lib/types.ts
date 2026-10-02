@@ -37,6 +37,8 @@ export interface Category {
   sistem: number;
   urutan: number;
   aktif: number;
+  /* 1 = disembunyikan dari halaman Budget, tapi tetap bisa dipakai mencatat */
+  tanpaBudget: number;
 }
 
 export interface Tx {
