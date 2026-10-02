@@ -62,22 +62,22 @@ var LABEL_LEVEL = { aman: 'Safe', warning: 'Warning', kritis: 'Critical', over: 
 
 var KATEGORI_AWAL = [
   // Income
-  { id: 'gaji',         nama: 'Salary',        tipe: 'Pemasukan',   warna: '#10b981', ikon: 'Wallet' },
+  { id: 'gaji',         nama: 'Gaji',          tipe: 'Pemasukan',   warna: '#10b981', ikon: 'Wallet' },
   { id: 'thr',          nama: 'THR',           tipe: 'Pemasukan',   warna: '#22c55e', ikon: 'Gift' },
   { id: 'bonus',        nama: 'Bonus',         tipe: 'Pemasukan',   warna: '#34d399', ikon: 'TrendingUp' },
-  { id: 'lain_masuk',   nama: 'Other',         tipe: 'Pemasukan',   warna: '#6ee7b7', ikon: 'Plus' },
+  { id: 'lain_masuk',   nama: 'Lainnya',       tipe: 'Pemasukan',   warna: '#6ee7b7', ikon: 'Plus' },
   // Expense
-  { id: 'makan',        nama: 'Food',          tipe: 'Pengeluaran', warna: '#f97316', ikon: 'UtensilsCrossed' },
-  { id: 'transportasi', nama: 'Transport',     tipe: 'Pengeluaran', warna: '#3b82f6', ikon: 'Car' },
-  { id: 'tagihan',      nama: 'Bills',         tipe: 'Pengeluaran', warna: '#8b5cf6', ikon: 'Receipt' },
-  { id: 'hiburan',      nama: 'Entertainment', tipe: 'Pengeluaran', warna: '#ec4899', ikon: 'Gamepad2' },
-  { id: 'pendidikan',   nama: 'Education',     tipe: 'Pengeluaran', warna: '#06b6d4', ikon: 'GraduationCap' },
-  { id: 'orang_tua',    nama: 'Parents',       tipe: 'Pengeluaran', warna: '#a855f7', ikon: 'Heart' },
-  { id: 'belanja',      nama: 'Shopping',      tipe: 'Pengeluaran', warna: '#eab308', ikon: 'ShoppingCart' },
-  { id: 'kesehatan',    nama: 'Health',        tipe: 'Pengeluaran', warna: '#ef4444', ikon: 'Stethoscope' },
-  { id: 'lainnya',      nama: 'Other',         tipe: 'Pengeluaran', warna: '#64748b', ikon: 'MoreHorizontal' },
+  { id: 'makan',        nama: 'Makan',         tipe: 'Pengeluaran', warna: '#f97316', ikon: 'UtensilsCrossed' },
+  { id: 'transportasi', nama: 'Transportasi',  tipe: 'Pengeluaran', warna: '#3b82f6', ikon: 'Car' },
+  { id: 'tagihan',      nama: 'Tagihan',       tipe: 'Pengeluaran', warna: '#8b5cf6', ikon: 'Receipt' },
+  { id: 'hiburan',      nama: 'Hiburan',       tipe: 'Pengeluaran', warna: '#ec4899', ikon: 'Gamepad2' },
+  { id: 'pendidikan',   nama: 'Pendidikan',    tipe: 'Pengeluaran', warna: '#06b6d4', ikon: 'GraduationCap' },
+  { id: 'orang_tua',    nama: 'Orang Tua',     tipe: 'Pengeluaran', warna: '#a855f7', ikon: 'Heart' },
+  { id: 'belanja',      nama: 'Belanja',       tipe: 'Pengeluaran', warna: '#eab308', ikon: 'ShoppingCart' },
+  { id: 'kesehatan',    nama: 'Kesehatan',     tipe: 'Pengeluaran', warna: '#ef4444', ikon: 'Stethoscope' },
+  { id: 'lainnya',      nama: 'Lainnya',       tipe: 'Pengeluaran', warna: '#64748b', ikon: 'MoreHorizontal' },
   // System — admin fees on transfers, never shown in the expense picker
-  { id: KAT_BIAYA_ADMIN, nama: 'Admin Fee',    tipe: 'Pengeluaran', warna: '#94a3b8', ikon: 'Landmark', sistem: 1 }
+  { id: KAT_BIAYA_ADMIN, nama: 'Biaya Admin',  tipe: 'Pengeluaran', warna: '#94a3b8', ikon: 'Landmark', sistem: 1 }
 ];
 
 var DOMPET_AWAL = [
