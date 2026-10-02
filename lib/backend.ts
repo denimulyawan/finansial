@@ -934,6 +934,22 @@ export async function jalankan(
       const tipe = p.tipe ? String(p.tipe) : "";
       const q = p.q ? String(p.q).toLowerCase() : "";
 
+      /*
+       * Peta nama dibangun LEBIH DULU supaya pencarian bisa mencocokkan
+       * nama kategori dan nama dompet, bukan hanya catatan dan id.
+       * Sebelumnya mengetik "Listrik" tidak menemukan apa pun karena yang
+       * dicari hanya catatan dan id kategori - terasa seperti datanya hilang.
+       */
+      const wMap: Record<string, ReturnType<typeof normalWallet>> = {};
+      const cMap: Record<string, ReturnType<typeof normalCategory>> = {};
+      const uMap: Record<string, string> = {};
+      (await bacaSemua(sesi, SH.WALLETS)).forEach((w) => { wMap[String(w.id)] = normalWallet(w); });
+      (await bacaSemua(sesi, SH.CATS)).forEach((c) => { cMap[String(c.id)] = normalCategory(c); });
+      (await bacaSemua(sesi, SH.USERS)).forEach((u) => {
+        const email = String(u.email || "").toLowerCase();
+        uMap[email] = String(u.nama || "").trim() || email.split("@")[0];
+      });
+
       const hasil = txs.filter((t) => {
         const tgl = String(t.tanggal || "");
         if (from && tgl < from) return false;
@@ -942,7 +958,17 @@ export async function jalankan(
         if (walletId && t.wallet_id !== walletId && t.wallet_tujuan_id !== walletId) return false;
         if (categoryId && t.category_id !== categoryId) return false;
         if (q) {
-          const hay = `${t.catatan || ""} ${t.category_id || ""} ${t.jumlah || ""}`.toLowerCase();
+          const hay = [
+            t.catatan,
+            t.category_id,
+            t.jumlah,
+            cMap[String(t.category_id)]?.nama,
+            wMap[String(t.wallet_id)]?.nama,
+            wMap[String(t.wallet_tujuan_id)]?.nama,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -951,11 +977,6 @@ export async function jalankan(
       hasil.sort(urutTx);
       const total = hasil.length;
       const limit = p.limit ? num(p.limit) : 300;
-
-      const wMap: Record<string, ReturnType<typeof normalWallet>> = {};
-      const cMap: Record<string, ReturnType<typeof normalCategory>> = {};
-      (await bacaSemua(sesi, SH.WALLETS)).forEach((w) => { wMap[String(w.id)] = normalWallet(w); });
-      (await bacaSemua(sesi, SH.CATS)).forEach((c) => { cMap[String(c.id)] = normalCategory(c); });
 
       const items = hasil.slice(0, limit).map((t) => {
         const d = rapikanTx(t);
@@ -968,6 +989,8 @@ export async function jalankan(
           walletTujuan: wt ? wt.nama : "",
           kategori: t.tipe === "Transfer" ? "Transfer" : c ? c.nama : String(t.category_id),
           warna: c ? c.warna : "#64748b",
+          /* siapa yang mencatatnya - berguna kalau dipakai berdua */
+          dicatatOleh: uMap[String(t.created_by || "").toLowerCase()] || "",
         };
       });
 

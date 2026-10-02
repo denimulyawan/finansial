@@ -114,7 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* Sesi kedaluwarsa di tengah pemakaian: keluar dengan tenang. */
   useEffect(() => {
-    const h = () => keluar();
+    const h = () => {
+      /* jelaskan kenapa tiba-tiba kembali ke halaman masuk */
+      setPesanMasuk("Sesi berakhir. Silakan masuk lagi.");
+      keluar();
+    };
     window.addEventListener(EVENT_KELUAR, h);
     return () => window.removeEventListener(EVENT_KELUAR, h);
   }, [keluar]);

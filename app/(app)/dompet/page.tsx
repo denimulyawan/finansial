@@ -425,7 +425,7 @@ export default function HalamanDompet() {
             {perluKetik && (
               <div>
                 <label className="label">
-                  Type <b>{hapus.nama}</b> to confirm
+                  Ketik <b>{hapus.nama}</b> untuk memastikan
                 </label>
                 <input
                   className="input"

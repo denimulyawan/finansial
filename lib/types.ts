@@ -56,6 +56,8 @@ export interface Tx {
   walletTujuan?: string;
   kategori?: string;
   warna?: string;
+  /* nama orang yang mencatat, hasil terjemahan dari created_by */
+  dicatatOleh?: string;
 }
 
 export interface BudgetItem {

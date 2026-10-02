@@ -324,9 +324,11 @@ export default function HalamanTransaksi() {
                             <p className="font-medium truncate">
                               {t.kategori || "Transfer"}
                             </p>
-                            {t.catatan && (
+                            {(t.catatan || t.dicatatOleh) && (
                               <p className="text-[11.5px] muted truncate max-w-[280px]">
-                                {t.catatan}
+                                {[t.catatan, t.dicatatOleh]
+                                  .filter(Boolean)
+                                  .join(" · ")}
                               </p>
                             )}
                           </div>
