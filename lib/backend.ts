@@ -461,6 +461,17 @@ function normalCategory(c: Baris) {
   };
 }
 
+/**
+ * Dompet piutang dan hutang bukan dompet milik kita - isinya nama orang,
+ * bukan tempat menyimpan uang. Dipisahkan dari daftar dompet supaya tidak
+ * ikut muncul di halaman Wallets, di pilihan dompet saat mencatat
+ * transaksi, dan di Total balance. Pengurusannya di halaman Debts.
+ */
+const JENIS_UTANG = ["piutang", "hutang"];
+function dompetSendiri(w: { jenis: string }) {
+  return !JENIS_UTANG.includes(w.jenis);
+}
+
 async function walletAktif(sesi: Sesi) {
   return (await bacaSemua(sesi, SH.WALLETS))
     .map(normalWallet)
@@ -761,7 +772,7 @@ export async function jalankan(
       const user = await cari(sesi, SH.USERS, (u) => String(u.email).toLowerCase() === sesi.email);
       return {
         user: user ? publicUser(user) : { email: sesi.email, nama: "", peran: "admin", status: "aktif" },
-        wallets: await walletAktif(sesi),
+        wallets: (await walletAktif(sesi)).filter(dompetSendiri),
         categories: await kategoriAktif(sesi),
         telegram: statusTelegram(),
         today: hariIni(),
@@ -771,9 +782,11 @@ export async function jalankan(
 
     case "dashboard": {
       const bulan = p.bulan ? String(p.bulan) : hariIni().slice(0, 7);
-      const wallets = await walletAktif(sesi);
+      const semuaDompet = await walletAktif(sesi);
+      /* saldo hanya menjumlahkan dompet milik kita sendiri */
+      const wallets = semuaDompet.filter(dompetSendiri);
       const txs = await semuaTx(sesi);
-      const saldo = hitungSaldo(wallets, txs);
+      const saldo = hitungSaldo(semuaDompet, txs);
       const totalSaldo = wallets.reduce((a, w) => a + (saldo[w.id] || 0), 0);
 
       let masuk = 0, keluar = 0, biayaAdmin = 0;
@@ -801,8 +814,8 @@ export async function jalankan(
         tren: trendData(txs, 6, bulan),
         perKategori: rincianKategori(txs, bulan, cMap),
         transaksiTerakhir: txs.slice().sort(urutTx).slice(0, 8).map(rapikanTx),
-        hutangPiutang: wallets
-          .filter((w) => w.jenis === "hutang" || w.jenis === "piutang")
+        hutangPiutang: semuaDompet
+          .filter((w) => !dompetSendiri(w))
           .map((w) => ({ id: w.id, nama: w.nama, jenis: w.jenis, saldo: saldo[w.id] || 0 })),
       };
     }
@@ -1275,6 +1288,11 @@ export async function jalankan(
           })
           .sort((a, b) => b.jumlah - a.jumlah),
         perDompet: Object.keys(perDompet)
+          /* dompet utang/piutang bukan milik kita, tidak masuk laporan dompet */
+          .filter((id) => {
+            const w = wMap[id];
+            return !w || dompetSendiri(w);
+          })
           .map((id) => {
             const w = wMap[id];
             return { id, nama: w ? w.nama : id, jenis: w ? w.jenis : "lainnya", jumlah: perDompet[id] };
@@ -1363,7 +1381,7 @@ export async function meta(sesi: Sesi) {
     user: saya
       ? publicUser(saya)
       : { email: sesi.email, nama: "", peran: "admin", status: "aktif" },
-    wallets: await walletAktif(sesi),
+    wallets: (await walletAktif(sesi)).filter(dompetSendiri),
     categories: await kategoriAktif(sesi),
     telegram: statusTelegram(),
     today: hariIni(),

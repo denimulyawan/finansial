@@ -41,8 +41,7 @@ const JENIS: {
   { v: "bank", l: "Bank account", Ikon: Landmark },
   { v: "ewallet", l: "E-Wallet", Ikon: Smartphone },
   { v: "investasi", l: "Investment", Ikon: PiggyBank },
-  { v: "piutang", l: "Receivable (owed to me)", Ikon: HandCoins },
-  { v: "hutang", l: "Payable (I owe)", Ikon: CreditCard },
+  /* piutang dan hutang tidak dibuat dari sini - diurus di halaman Debts */
   { v: "lainnya", l: "Other", Ikon: WalletIcon },
 ];
 
@@ -70,8 +69,12 @@ export default function HalamanDompet() {
   const [teksMassal, setTeksMassal] = useState("");
 
   const wallets = data?.wallets || [];
-  const aktif = wallets.filter((w) => w.aktif === 1);
-  const nonaktif = wallets.filter((w) => w.aktif !== 1);
+  /* Dompet utang/piutang diurus di halaman Debts, bukan di sini. */
+  const sendiri = wallets.filter(
+    (w) => w.jenis !== "piutang" && w.jenis !== "hutang"
+  );
+  const aktif = sendiri.filter((w) => w.aktif === 1);
+  const nonaktif = sendiri.filter((w) => w.aktif !== 1);
   const totalSaldo = aktif.reduce((a, w) => a + w.saldo, 0);
 
   /* Dompet yang punya transaksi wajib diketik namanya dulu, supaya tidak
