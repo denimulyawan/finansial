@@ -823,7 +823,9 @@ function budgetPage_(p) {
     status: budgetStatus_(bulan),
     statusBulanLain: bulanSebelum_(bulan) ? budgetStatus_(bulanSebelum_(bulan)) : null,
     kategoriTersedia: activeCategories_().filter(function (c) {
-      return c.tipe === 'Pengeluaran';
+      /* kategori sistem (Biaya Admin) tidak diatur terpisah; biayanya
+         sudah dihitung otomatis dari transfer */
+      return c.tipe === 'Pengeluaran' && num_(c.sistem) !== 1;
     }),
     adaBudgetBulanLalu: readAll_(SH.BUDGET).some(function (b) {
       return b.bulan === bulanSebelum_(bulan);
@@ -1170,8 +1172,11 @@ function budgetStatus_(bulan) {
       return;
     }
 
-    var terpakai = pakai[b.category_id] || 0;
     var c = cMap[b.category_id];
+    /* kategori sistem tidak ditampilkan sebagai pos budget tersendiri */
+    if (c && num_(c.sistem) === 1) return;
+
+    var terpakai = pakai[b.category_id] || 0;
     var persen = batas > 0 ? (terpakai / batas) * 100 : 0;
     items.push({
       categoryId: b.category_id,

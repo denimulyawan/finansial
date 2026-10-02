@@ -521,8 +521,11 @@ async function statusBudget(sesi: Sesi, bulan: string) {
       return;
     }
 
-    const terpakai = pakai[String(b.category_id)] || 0;
     const c = cMap[String(b.category_id)];
+    /* kategori sistem tidak ditampilkan sebagai pos budget tersendiri */
+    if (c && c.sistem === 1) return;
+
+    const terpakai = pakai[String(b.category_id)] || 0;
     const persen = batas > 0 ? (terpakai / batas) * 100 : 0;
     items.push({
       categoryId: String(b.category_id),
@@ -1079,7 +1082,11 @@ export async function jalankan(
         bulan,
         status: await statusBudget(sesi, bulan),
         statusBulanLain: await statusBudget(sesi, sebelum),
-        kategoriTersedia: (await kategoriAktif(sesi)).filter((c) => c.tipe === "Pengeluaran"),
+        /* Kategori sistem seperti Biaya Admin tidak ikut, karena biayanya
+           sudah dihitung otomatis dari transfer. Tetap masuk hitungan total. */
+        kategoriTersedia: (await kategoriAktif(sesi)).filter(
+          (c) => c.tipe === "Pengeluaran" && c.sistem !== 1
+        ),
         adaBudgetBulanLalu: (await bacaSemua(sesi, SH.BUDGET)).some(
           (b) => String(b.bulan) === sebelum
         ),
