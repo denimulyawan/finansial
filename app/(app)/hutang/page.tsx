@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   HandCoins,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { ApiError, api, idBaru } from "@/lib/api";
 import { picuBootstrap, picuMuatUlang, useApi } from "@/lib/hooks";
@@ -39,6 +40,9 @@ export default function HalamanHutang() {
   const [form, setForm] = useState<Konteks | null>(null);
   const [lunas, setLunas] = useState<WalletSaldo | null>(null);
   const [rincian, setRincian] = useState<WalletSaldo | null>(null);
+  const [hapus, setHapus] = useState<WalletSaldo | null>(null);
+  const [teksHapus, setTeksHapus] = useState("");
+  const [menghapus, setMenghapus] = useState(false);
 
   const semua = data?.wallets || [];
   const aktif = semua.filter((w) => w.aktif === 1);
@@ -57,6 +61,31 @@ export default function HalamanHutang() {
       picuBootstrap();
     } catch (e) {
       toast.gagal(e instanceof ApiError ? e.message : "Could not archive.");
+    }
+  }
+
+  async function hapusUtang() {
+    if (!hapus) return;
+    setMenghapus(true);
+    try {
+      const hasil = await api<{ transaksiTerhapus: number }>("wallet.delete", {
+        id: hapus.id,
+        paksa: true,
+      });
+      toast.sukses(
+        `${hapus.nama} deleted` +
+          (hasil.transaksiTerhapus
+            ? `, along with ${hasil.transaksiTerhapus} transaction(s).`
+            : ".")
+      );
+      setHapus(null);
+      setTeksHapus("");
+      picuBootstrap();
+      picuMuatUlang();
+    } catch (e) {
+      toast.gagal(e instanceof ApiError ? e.message : "Could not delete.");
+    } finally {
+      setMenghapus(false);
     }
   }
 
@@ -125,6 +154,7 @@ export default function HalamanHutang() {
             onTambah={() => setForm({ mode: "piutang-baru" })}
             onLunas={(w) => setLunas(w)}
             onRincian={(w) => setRincian(w)}
+            onHapus={(w) => { setTeksHapus(""); setHapus(w); }}
           />
           <DaftarUtang
             judul="Payable"
@@ -135,6 +165,7 @@ export default function HalamanHutang() {
             onTambah={() => setForm({ mode: "hutang-baru" })}
             onLunas={(w) => setLunas(w)}
             onRincian={(w) => setRincian(w)}
+            onHapus={(w) => { setTeksHapus(""); setHapus(w); }}
           />
         </div>
       )}
@@ -206,6 +237,72 @@ export default function HalamanHutang() {
           </p>
         )}
       </Modal>
+
+      <Modal
+        buka={!!hapus}
+        onTutup={() => setHapus(null)}
+        judul={hapus ? `Delete ${hapus.nama}?` : ""}
+        sub="This cannot be undone."
+        lebar={440}
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setHapus(null)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={hapusUtang}
+              disabled={
+                menghapus ||
+                ((hapus?.jmlTransaksi || 0) > 0 &&
+                  teksHapus.trim().toUpperCase() !== "DELETE")
+              }
+            >
+              {menghapus ? "Deleting…" : "Delete"}
+            </button>
+          </>
+        }
+      >
+        {hapus && (
+          <div className="space-y-3 text-[13px] text-2 leading-relaxed">
+            <p
+              className="rounded-xl p-3"
+              style={{
+                background: "color-mix(in srgb, var(--danger) 7%, #fff)",
+                color: "var(--danger)",
+              }}
+            >
+              The debt record is removed
+              {(hapus.jmlTransaksi || 0) > 0
+                ? `, together with its ${hapus.jmlTransaksi} transaction(s)`
+                : ""}
+              . Wallet balances will change to match.
+            </p>
+
+            <p className="muted">
+              If the debt is settled and you only want it out of the way, use
+              {" "}
+              <b>Settled → Archive</b> instead. That hides it from this list
+              without touching a single transaction.
+            </p>
+
+            {(hapus.jmlTransaksi || 0) > 0 && (
+              <div>
+                <label className="label">
+                  Type <b>DELETE</b> to confirm
+                </label>
+                <input
+                  className="input"
+                  value={teksHapus}
+                  onChange={(e) => setTeksHapus(e.target.value)}
+                  placeholder="DELETE"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </>
   );
 }
@@ -274,6 +371,7 @@ function DaftarUtang({
   onTambah,
   onLunas,
   onRincian,
+  onHapus,
 }: {
   judul: string;
   items: WalletSaldo[];
@@ -283,6 +381,7 @@ function DaftarUtang({
   onTambah: () => void;
   onLunas: (w: WalletSaldo) => void;
   onRincian: (w: WalletSaldo) => void;
+  onHapus: (w: WalletSaldo) => void;
 }) {
   const warna = jenis === "piutang" ? "var(--success)" : "var(--danger)";
 
@@ -364,6 +463,14 @@ function DaftarUtang({
                         {aksiLabel}
                       </button>
                     )}
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      style={{ color: "var(--danger)" }}
+                      onClick={() => onHapus(w)}
+                      title="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                 </div>
               );
